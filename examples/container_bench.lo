@@ -1,0 +1,178 @@
+import bench/report
+import bench/time
+import container/list
+import container/vec
+
+global COUNT usize = 1000000
+
+def run_vec(count usize, ref out report.Measure) i32 {
+    var values = vec.make[u64]()
+    var status = values.reserve(count)
+    if status.failed() {
+        values.release()
+        ret status.code
+    }
+
+    var start = time.now_us()
+    var index usize = 0
+    for index < count {
+        status = values.push(cast[u64](index))
+        if status.failed() {
+            values.release()
+            ret status.code
+        }
+
+        index = index + 1
+    }
+    var insert_us = time.since_us(start)
+
+    var query_sum u64 = 0
+    start = time.now_us()
+    index = 0
+    for index < values.len() {
+        var item = values.read(index)
+        if item == null {
+            values.release()
+            ret 10
+        }
+
+        query_sum = query_sum + *item
+        index = index + 1
+    }
+    var query_us = time.since_us(start)
+
+    var update_sum u64 = 0
+    start = time.now_us()
+    index = 0
+    for index < values.len() {
+        var item = values.at(index)
+        if item == null {
+            values.release()
+            ret 11
+        }
+
+        *item = *item + 1
+        update_sum = update_sum + *item
+        index = index + 1
+    }
+    var update_us = time.since_us(start)
+
+    var delete_sum u64 = 0
+    start = time.now_us()
+    for !values.is_empty() {
+        var item u64 = 0
+        status = values.pop(ref item)
+        if status.failed() {
+            values.release()
+            ret status.code
+        }
+
+        delete_sum = delete_sum + item
+    }
+    var delete_us = time.since_us(start)
+
+    values.release()
+    out = report.Measure(
+        insert_us = insert_us,
+        query_us = query_us,
+        update_us = update_us,
+        delete_us = delete_us,
+        checksum = query_sum + update_sum + delete_sum
+    )
+    ret 0
+}
+
+def run_list(count usize, ref out report.Measure) i32 {
+    var values = list.make[u64]()
+    var start = time.now_us()
+    var index usize = 0
+    for index < count {
+        var status = values.push_back(cast[u64](index))
+        if status.failed() {
+            values.clear()
+            ret status.code
+        }
+
+        index = index + 1
+    }
+    var insert_us = time.since_us(start)
+
+    var query_sum u64 = 0
+    start = time.now_us()
+    var it = values.iter()
+    for !it.done() {
+        var item = it.value()
+        if item == null {
+            values.clear()
+            ret 20
+        }
+
+        query_sum = query_sum + *item
+        it.next()
+    }
+    var query_us = time.since_us(start)
+
+    var update_sum u64 = 0
+    start = time.now_us()
+    var mut = values.iter()
+    for !mut.done() {
+        var item = mut.slot()
+        if item == null {
+            values.clear()
+            ret 21
+        }
+
+        *item = *item + 1
+        update_sum = update_sum + *item
+        mut.next()
+    }
+    var update_us = time.since_us(start)
+
+    var delete_sum u64 = 0
+    start = time.now_us()
+    for !values.is_empty() {
+        var item u64 = 0
+        var status = values.pop_front(ref item)
+        if status.failed() {
+            values.clear()
+            ret status.code
+        }
+
+        delete_sum = delete_sum + item
+    }
+    var delete_us = time.since_us(start)
+
+    values.clear()
+    out = report.Measure(
+        insert_us = insert_us,
+        query_us = query_us,
+        update_us = update_us,
+        delete_us = delete_us,
+        checksum = query_sum + update_sum + delete_sum
+    )
+    ret 0
+}
+
+var vec_result = report.zero()
+var code = run_vec(COUNT, ref vec_result)
+if code != 0 {
+    ret code
+}
+
+code = report.write_measure("lona vec", COUNT, vec_result)
+if code != 0 {
+    ret code
+}
+
+var list_result = report.zero()
+code = run_list(COUNT, ref list_result)
+if code != 0 {
+    ret code
+}
+
+code = report.write_measure("lona list", COUNT, list_result)
+if code != 0 {
+    ret code
+}
+
+ret 0

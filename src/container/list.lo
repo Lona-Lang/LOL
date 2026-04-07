@@ -21,6 +21,14 @@ struct ListIterator[T] {
         ret &self.current.value
     }
 
+    def slot() T* {
+        if self.current == null {
+            ret null
+        }
+
+        ret &self.current.value
+    }
+
     set def next() bool {
         if self.current == null {
             ret false

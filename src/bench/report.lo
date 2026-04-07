@@ -1,0 +1,136 @@
+struct CFile
+
+#[extern]
+global stdout CFile*
+
+#[extern "C"]
+def fwrite(buffer u8 const[*], size usize, count usize, stream CFile*) usize
+
+struct Measure {
+    insert_us u64
+    query_us u64
+    update_us u64
+    delete_us u64
+    checksum u64
+}
+
+def zero() Measure {
+    ret Measure(insert_us = 0, query_us = 0, update_us = 0, delete_us = 0, checksum = 0)
+}
+
+def write_measure(name u8 const[*], count usize, measure Measure) i32 {
+    var line u8[256] = {}
+    var used usize = 0
+
+    if !_append_text(cast[u8[*]](&line(0)), 256, ref used, name) {
+        ret 1
+    }
+
+    if !_append_text(cast[u8[*]](&line(0)), 256, ref used, " count=") {
+        ret 1
+    }
+
+    if !_append_u64(cast[u8[*]](&line(0)), 256, ref used, cast[u64](count)) {
+        ret 1
+    }
+
+    if !_append_text(cast[u8[*]](&line(0)), 256, ref used, " insert_us=") {
+        ret 1
+    }
+
+    if !_append_u64(cast[u8[*]](&line(0)), 256, ref used, measure.insert_us) {
+        ret 1
+    }
+
+    if !_append_text(cast[u8[*]](&line(0)), 256, ref used, " query_us=") {
+        ret 1
+    }
+
+    if !_append_u64(cast[u8[*]](&line(0)), 256, ref used, measure.query_us) {
+        ret 1
+    }
+
+    if !_append_text(cast[u8[*]](&line(0)), 256, ref used, " update_us=") {
+        ret 1
+    }
+
+    if !_append_u64(cast[u8[*]](&line(0)), 256, ref used, measure.update_us) {
+        ret 1
+    }
+
+    if !_append_text(cast[u8[*]](&line(0)), 256, ref used, " delete_us=") {
+        ret 1
+    }
+
+    if !_append_u64(cast[u8[*]](&line(0)), 256, ref used, measure.delete_us) {
+        ret 1
+    }
+
+    if !_append_text(cast[u8[*]](&line(0)), 256, ref used, " checksum=") {
+        ret 1
+    }
+
+    if !_append_u64(cast[u8[*]](&line(0)), 256, ref used, measure.checksum) {
+        ret 1
+    }
+
+    if fwrite(cast[u8 const[*]](&line(0)), 1, used, stdout) != used {
+        ret 1
+    }
+
+    if fwrite("\n", 1, 1, stdout) != 1 {
+        ret 1
+    }
+
+    ret 0
+}
+
+def _append_text(buffer u8[*], capacity usize, ref used usize, text u8 const[*]) bool {
+    var index usize = 0
+    for true {
+        var ch = text(index)
+        if ch == 0 {
+            ret true
+        }
+
+        if used >= capacity {
+            ret false
+        }
+
+        buffer(used) = ch
+        used = used + 1
+        index = index + 1
+    }
+
+    ret true
+}
+
+def _append_u64(buffer u8[*], capacity usize, ref used usize, value u64) bool {
+    if value == 0 {
+        if used >= capacity {
+            ret false
+        }
+
+        buffer(used) = '0'
+        used = used + 1
+        ret true
+    }
+
+    ret _append_nonzero_u64(buffer, capacity, ref used, value)
+}
+
+def _append_nonzero_u64(buffer u8[*], capacity usize, ref used usize, value u64) bool {
+    if value >= 10 {
+        if !_append_nonzero_u64(buffer, capacity, ref used, value / 10) {
+            ret false
+        }
+    }
+
+    if used >= capacity {
+        ret false
+    }
+
+    buffer(used) = cast[u8]('0') + cast[u8](value % 10)
+    used = used + 1
+    ret true
+}

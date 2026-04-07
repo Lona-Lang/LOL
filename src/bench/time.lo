@@ -1,0 +1,28 @@
+struct TimeZone
+
+#[repr "C"]
+struct TimeVal {
+    tv_sec i64
+    tv_usec i64
+}
+
+#[extern "C"]
+def gettimeofday(tv TimeVal*, tz TimeZone*) i32
+
+def now_us() u64 {
+    var value = TimeVal(tv_sec = 0, tv_usec = 0)
+    if gettimeofday(&value, null) != 0 {
+        ret 0
+    }
+
+    ret cast[u64](value.tv_sec) * 1000000 + cast[u64](value.tv_usec)
+}
+
+def since_us(start u64) u64 {
+    var finish = now_us()
+    if finish < start {
+        ret 0
+    }
+
+    ret finish - start
+}
