@@ -1,0 +1,142 @@
+import container/_c
+import container/result
+import container/slice
+
+struct Vec[T] {
+    data T[*]
+    size usize
+    capacity usize
+
+    def len() usize {
+        ret self.size
+    }
+
+    def cap() usize {
+        ret self.capacity
+    }
+
+    def is_empty() bool {
+        ret self.size == 0
+    }
+
+    def at(index usize) T* {
+        if self.data == null || index >= self.size {
+            ret null
+        }
+
+        ret &self.data(index)
+    }
+
+    def read(index usize) T const* {
+        if self.data == null || index >= self.size {
+            ret null
+        }
+
+        ret &self.data(index)
+    }
+
+    def first() T* {
+        ret self.at(0)
+    }
+
+    def last() T* {
+        if self.size == 0 {
+            ret null
+        }
+
+        ret self.at(self.size - 1)
+    }
+
+    def view() slice.Slice[T] {
+        if self.data == null || self.size == 0 {
+            ret slice.empty[T]()
+        }
+
+        var items T const[*] = self.data
+        ret slice.from_ptr[T](items, self.size)
+    }
+
+    set def reserve(min_capacity usize) result.Status {
+        if min_capacity <= self.capacity {
+            ret result.success()
+        }
+
+        var next_capacity usize = self.capacity
+        if next_capacity == 0 {
+            next_capacity = 4
+        }
+
+        for next_capacity < min_capacity {
+            next_capacity = next_capacity * 2
+        }
+
+        var raw = _c.malloc(sizeof[T]() * next_capacity)
+        if raw == null {
+            ret result.failure(result.ERR_ALLOC)
+        }
+
+        var next_items T[*] = cast[T[*]](raw)
+        var index usize = 0
+        for index < self.size {
+            next_items(index) = self.data(index)
+            index = index + 1
+        }
+
+        if self.data != null {
+            _c.free(cast[u8*](self.data))
+        }
+
+        self.data = next_items
+        self.capacity = next_capacity
+        ret result.success()
+    }
+
+    set def push(value T) result.Status {
+        var status = self.reserve(self.size + 1)
+        if status.failed() {
+            ret status
+        }
+
+        self.data(self.size) = value
+        self.size = self.size + 1
+        ret result.success()
+    }
+
+    set def pop(ref out T) result.Status {
+        if self.size == 0 {
+            ret result.failure(result.ERR_EMPTY)
+        }
+
+        out = self.data(self.size - 1)
+        self.size = self.size - 1
+        ret result.success()
+    }
+
+    set def clear() {
+        self.size = 0
+    }
+
+    set def release() {
+        if self.data != null {
+            _c.free(cast[u8*](self.data))
+        }
+
+        self.data = null
+        self.size = 0
+        self.capacity = 0
+    }
+}
+
+def make[T]() Vec[T] {
+    ret Vec[T](data = null, size = 0, capacity = 0)
+}
+
+def with_capacity[T](capacity usize) result.Result[Vec[T]] {
+    var value = make[T]()
+    var status = value.reserve(capacity)
+    if status.failed() {
+        ret result.fail_value[Vec[T]](value, result.ERR_ALLOC)
+    }
+
+    ret result.ok_value[Vec[T]](value)
+}

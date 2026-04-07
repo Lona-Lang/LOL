@@ -1,0 +1,5 @@
+#[extern "C"]
+def malloc(size usize) u8*
+
+#[extern "C"]
+def free(ptr u8*)

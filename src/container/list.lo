@@ -1,0 +1,145 @@
+import container/_c
+import container/result
+
+struct _Node[T] {
+    set value T
+    set next _Node[T]*
+}
+
+struct ListIterator[T] {
+    current _Node[T]*
+
+    def done() bool {
+        ret self.current == null
+    }
+
+    def value() T const* {
+        if self.current == null {
+            ret null
+        }
+
+        ret &self.current.value
+    }
+
+    set def next() bool {
+        if self.current == null {
+            ret false
+        }
+
+        self.current = self.current.next
+        ret self.current != null
+    }
+}
+
+struct List[T] {
+    head _Node[T]*
+    tail _Node[T]*
+    size usize
+
+    def len() usize {
+        ret self.size
+    }
+
+    def is_empty() bool {
+        ret self.size == 0
+    }
+
+    def front() T* {
+        if self.head == null {
+            ret null
+        }
+
+        ret &self.head.value
+    }
+
+    def back() T* {
+        if self.tail == null {
+            ret null
+        }
+
+        ret &self.tail.value
+    }
+
+    def iter() ListIterator[T] {
+        ret ListIterator[T](current = self.head)
+    }
+
+    set def push_front(value T) result.Status {
+        var node = _new_node[T](value)
+        if node == null {
+            ret result.failure(result.ERR_ALLOC)
+        }
+
+        node.next = self.head
+        self.head = node
+        if self.tail == null {
+            self.tail = node
+        }
+        self.size = self.size + 1
+        ret result.success()
+    }
+
+    set def push_back(value T) result.Status {
+        var node = _new_node[T](value)
+        if node == null {
+            ret result.failure(result.ERR_ALLOC)
+        }
+
+        if self.tail == null {
+            self.head = node
+            self.tail = node
+        } else {
+            self.tail.next = node
+            self.tail = node
+        }
+
+        self.size = self.size + 1
+        ret result.success()
+    }
+
+    set def pop_front(ref out T) result.Status {
+        if self.head == null {
+            ret result.failure(result.ERR_EMPTY)
+        }
+
+        var node = self.head
+        out = node.value
+        self.head = node.next
+        if self.head == null {
+            self.tail = null
+        }
+
+        self.size = self.size - 1
+        _c.free(cast[u8*](node))
+        ret result.success()
+    }
+
+    set def clear() {
+        var node = self.head
+        for node != null {
+            var next = node.next
+            _c.free(cast[u8*](node))
+            node = next
+        }
+
+        self.head = null
+        self.tail = null
+        self.size = 0
+    }
+}
+
+def make[T]() List[T] {
+    ret List[T](head = null, tail = null, size = 0)
+}
+
+def _new_node[T](value T) _Node[T]* {
+    var raw = _c.malloc(sizeof[_Node[T]]())
+    if raw == null {
+        ret null
+    }
+
+    var node _Node[T]* = cast[_Node[T]*](raw)
+    node.value = value
+    node.next = null
+    ret node
+}

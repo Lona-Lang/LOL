@@ -1,0 +1,44 @@
+struct Slice[T] {
+    data T const[*]
+    size usize
+
+    def len() usize {
+        ret self.size
+    }
+
+    def is_empty() bool {
+        ret self.size == 0
+    }
+
+    def at(index usize) T const* {
+        if self.data == null || index >= self.size {
+            ret null
+        }
+
+        ret &self.data(index)
+    }
+
+    def first() T const* {
+        ret self.at(0)
+    }
+
+    def last() T const* {
+        if self.size == 0 {
+            ret null
+        }
+
+        ret self.at(self.size - 1)
+    }
+}
+
+def empty[T]() Slice[T] {
+    ret Slice[T](data = null, size = 0)
+}
+
+def from_ptr[T](data T const[*], size usize) Slice[T] {
+    if data == null || size == 0 {
+        ret empty[T]()
+    }
+
+    ret Slice[T](data = data, size = size)
+}

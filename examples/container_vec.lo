@@ -1,0 +1,52 @@
+import container/result
+import container/vec
+
+var values = vec.make[i32]()
+var status = values.push(10)
+if status.failed() {
+    ret status.code
+}
+
+status = values.push(20)
+if status.failed() {
+    values.release()
+    ret status.code
+}
+
+status = values.push(30)
+if status.failed() {
+    values.release()
+    ret status.code
+}
+
+if values.len() != 3 {
+    values.release()
+    ret 10
+}
+
+var view = values.view()
+var middle = view.at(1)
+if middle == null {
+    values.release()
+    ret 11
+}
+
+if *middle != 20 {
+    values.release()
+    ret 12
+}
+
+var last i32 = 0
+status = values.pop(ref last)
+if status.failed() {
+    values.release()
+    ret status.code
+}
+
+if last != 30 {
+    values.release()
+    ret 13
+}
+
+values.release()
+ret 0

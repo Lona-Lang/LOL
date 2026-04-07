@@ -1,0 +1,53 @@
+import container/list
+import container/result
+
+var values = list.make[i32]()
+var status = values.push_back(5)
+if status.failed() {
+    ret status.code
+}
+
+status = values.push_back(6)
+if status.failed() {
+    values.clear()
+    ret status.code
+}
+
+status = values.push_front(4)
+if status.failed() {
+    values.clear()
+    ret status.code
+}
+
+var it = values.iter()
+var total i32 = 0
+for !it.done() {
+    var item = it.value()
+    if item == null {
+        values.clear()
+        ret 10
+    }
+
+    total = total + *item
+    it.next()
+}
+
+if total != 15 {
+    values.clear()
+    ret 11
+}
+
+var first i32 = 0
+status = values.pop_front(ref first)
+if status.failed() {
+    values.clear()
+    ret status.code
+}
+
+if first != 4 {
+    values.clear()
+    ret 12
+}
+
+values.clear()
+ret 0

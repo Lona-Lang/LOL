@@ -1,0 +1,53 @@
+global OK i32 = 0
+global ERR_EMPTY i32 = 1
+global ERR_ALLOC i32 = 2
+global ERR_RANGE i32 = 3
+
+struct Status {
+    code i32
+
+    def ok() bool {
+        ret self.code == OK
+    }
+
+    def failed() bool {
+        ret self.code != OK
+    }
+}
+
+struct Result[T] {
+    set value T
+    status Status
+
+    def ok() bool {
+        ret self.status.ok()
+    }
+
+    def failed() bool {
+        ret self.status.failed()
+    }
+
+    def code() i32 {
+        ret self.status.code
+    }
+}
+
+def success() Status {
+    ret Status(code = OK)
+}
+
+def failure(code i32) Status {
+    ret Status(code = code)
+}
+
+def ok_value[T](value T) Result[T] {
+    ret Result[T](value = value, status = success())
+}
+
+def fail_value[T](value T, code i32) Result[T] {
+    ret Result[T](value = value, status = failure(code))
+}
+
+def with_status[T](value T, status Status) Result[T] {
+    ret Result[T](value = value, status = status)
+}
