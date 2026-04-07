@@ -1,0 +1,226 @@
+import ios/_c
+import ios/result
+import ios/stream
+
+struct File {
+    handle _c.HostFile*
+    owned bool
+
+    def is_open() bool {
+        ret self.handle != null
+    }
+
+    def borrowed() bool {
+        ret !self.owned
+    }
+
+    def end_reached() bool {
+        if self.handle == null {
+            ret false
+        }
+
+        ret _c.feof(self.handle) != 0
+    }
+
+    def has_error() bool {
+        if self.handle == null {
+            ret true
+        }
+
+        ret _c.ferror(self.handle) != 0
+    }
+
+    set def clear_state() result.Status {
+        if self.handle == null {
+            ret result.failure(result.ERR_CLOSED)
+        }
+
+        _c.clearerr(self.handle)
+        ret result.success()
+    }
+
+    set def write(text u8 const[*]) result.Status {
+        if self.handle == null {
+            ret result.failure(result.ERR_CLOSED)
+        }
+
+        if _c.fputs(text, self.handle) < 0 {
+            ret result.failure(result.ERR_WRITE)
+        }
+
+        ret result.success()
+    }
+
+    set def write_line(text u8 const[*]) result.Status {
+        var status = self.write(text)
+        if status.failed() {
+            ret status
+        }
+
+        if _c.fputc('\n', self.handle) < 0 {
+            ret result.failure(result.ERR_WRITE)
+        }
+
+        ret result.success()
+    }
+
+    set def write_bytes(buffer u8 const[*], size usize, count usize) result.Result[usize] {
+        if self.handle == null {
+            ret result.fail_value[usize](0, result.ERR_CLOSED)
+        }
+
+        var written = _c.fwrite(buffer, size, count, self.handle)
+        if written == count {
+            ret result.ok_value[usize](written)
+        }
+
+        ret result.fail_value[usize](written, result.ERR_WRITE)
+    }
+
+    set def flush() result.Status {
+        if self.handle == null {
+            ret result.failure(result.ERR_CLOSED)
+        }
+
+        if _c.fflush(self.handle) != 0 {
+            ret result.failure(result.ERR_FLUSH)
+        }
+
+        ret result.success()
+    }
+
+    set def read_byte() result.Result[i32] {
+        if self.handle == null {
+            ret result.fail_value[i32](0, result.ERR_CLOSED)
+        }
+
+        var value = _c.fgetc(self.handle)
+        if value == _c.EOF {
+            if _c.feof(self.handle) != 0 {
+                ret result.fail_value[i32](0, result.END)
+            }
+
+            ret result.fail_value[i32](0, result.ERR_READ)
+        }
+
+        ret result.ok_value[i32](value)
+    }
+
+    set def read_bytes(buffer u8*, size usize, count usize) result.Result[usize] {
+        if self.handle == null {
+            ret result.fail_value[usize](0, result.ERR_CLOSED)
+        }
+
+        var loaded = _c.fread(buffer, size, count, self.handle)
+        if loaded == count {
+            ret result.ok_value[usize](loaded)
+        }
+
+        if _c.ferror(self.handle) != 0 {
+            ret result.fail_value[usize](loaded, result.ERR_READ)
+        }
+
+        if _c.feof(self.handle) != 0 {
+            ret result.fail_value[usize](loaded, result.END)
+        }
+
+        ret result.fail_value[usize](loaded, result.ERR_READ)
+    }
+
+    set def close() result.Status {
+        if self.handle == null {
+            ret result.success()
+        }
+
+        if !self.owned {
+            self.handle = null
+            ret result.success()
+        }
+
+        var status = _c.fclose(self.handle)
+        self.handle = null
+        if status != 0 {
+            ret result.failure(result.ERR_CLOSE)
+        }
+
+        ret result.success()
+    }
+}
+
+impl File: stream.TextSink
+impl File: stream.ByteSource
+impl File: stream.ByteSink
+
+// Path-based file system operations are grouped under a dedicated receiver.
+struct FilePath {
+    text u8 const[*]
+
+    def open() result.Result[File] {
+        var handle = _c.fopen(self.text, "r")
+        if handle == null {
+            ret result.fail_value[File](_closed(), result.ERR_OPEN)
+        }
+
+        ret result.ok_value[File](_take(handle))
+    }
+
+    def create() result.Result[File] {
+        var handle = _c.fopen(self.text, "w")
+        if handle == null {
+            ret result.fail_value[File](_closed(), result.ERR_OPEN)
+        }
+
+        ret result.ok_value[File](_take(handle))
+    }
+
+    def append() result.Result[File] {
+        var handle = _c.fopen(self.text, "a")
+        if handle == null {
+            ret result.fail_value[File](_closed(), result.ERR_OPEN)
+        }
+
+        ret result.ok_value[File](_take(handle))
+    }
+
+    def delete() result.Status {
+        if _c.remove(self.text) != 0 {
+            ret result.failure(result.ERR_REMOVE)
+        }
+
+        ret result.success()
+    }
+
+    def move_to(next_path u8 const[*]) result.Status {
+        if _c.rename(self.text, next_path) != 0 {
+            ret result.failure(result.ERR_RENAME)
+        }
+
+        ret result.success()
+    }
+}
+
+// Internal handle constructors shared with ios/console and path open helpers.
+def _closed() File {
+    ret File(handle = null, owned = false)
+}
+
+def _borrow(handle _c.HostFile*) File {
+    ret File(handle = handle, owned = false)
+}
+
+def _take(handle _c.HostFile*) File {
+    ret File(handle = handle, owned = true)
+}
+
+def path(text u8 const[*]) FilePath {
+    ret FilePath(text = text)
+}
+
+def temporary() result.Result[File] {
+    var handle = _c.tmpfile()
+    if handle == null {
+        ret result.fail_value[File](_closed(), result.ERR_TEMP)
+    }
+
+    ret result.ok_value[File](_take(handle))
+}

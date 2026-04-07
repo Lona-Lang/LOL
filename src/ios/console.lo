@@ -1,0 +1,46 @@
+import ios/_c
+import ios/file
+import ios/result
+import ios/stream
+
+def standard_input() file.File {
+    ret file._borrow(_c.stdin)
+}
+
+def standard_output() file.File {
+    ret file._borrow(_c.stdout)
+}
+
+def standard_error() file.File {
+    ret file._borrow(_c.stderr)
+}
+
+def write(text u8 const[*]) result.Status {
+    var target = standard_output()
+    ret stream.write_to[file.File](ref target, text)
+}
+
+def write_line(text u8 const[*]) result.Status {
+    var target = standard_output()
+    ret stream.write_line_to[file.File](ref target, text)
+}
+
+def error(text u8 const[*]) result.Status {
+    var target = standard_error()
+    ret stream.write_to[file.File](ref target, text)
+}
+
+def error_line(text u8 const[*]) result.Status {
+    var target = standard_error()
+    ret stream.write_line_to[file.File](ref target, text)
+}
+
+def flush() result.Status {
+    var target = standard_output()
+    ret stream.flush[file.File](ref target)
+}
+
+def flush_error() result.Status {
+    var target = standard_error()
+    ret stream.flush[file.File](ref target)
+}

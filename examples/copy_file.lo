@@ -1,0 +1,41 @@
+import ios/file
+import ios/stream
+
+var source = file.path("examples/source.txt").open()
+if source.failed() {
+    ret source.code()
+}
+
+var target = file.path("build/copied-source.txt").create()
+if target.failed() {
+    source.value.close()
+    ret target.code()
+}
+
+var buffer u8[32] = {}
+var copied = stream.copy_all[file.File, file.File](ref source.value, ref target.value, &buffer(0), 32)
+if copied.failed() {
+    target.value.close()
+    source.value.close()
+    ret copied.code()
+}
+
+var status = target.value.flush()
+if status.failed() {
+    target.value.close()
+    source.value.close()
+    ret status.code
+}
+
+status = target.value.close()
+if status.failed() {
+    source.value.close()
+    ret status.code
+}
+
+status = source.value.close()
+if status.failed() {
+    ret status.code
+}
+
+ret 0

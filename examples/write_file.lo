@@ -1,0 +1,26 @@
+import ios/file
+import ios/stream
+
+var opened = file.path("build/ios-demo.txt").create()
+if opened.failed() {
+    ret opened.code()
+}
+
+var status = stream.write_line_to[file.File](ref opened.value, "hello from ios/file")
+if status.failed() {
+    opened.value.close()
+    ret status.code
+}
+
+status = stream.flush[file.File](ref opened.value)
+if status.failed() {
+    opened.value.close()
+    ret status.code
+}
+
+status = opened.value.close()
+if status.failed() {
+    ret status.code
+}
+
+ret 0

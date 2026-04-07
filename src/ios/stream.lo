@@ -1,0 +1,91 @@
+import ios/result
+
+trait TextSink {
+    set def write(text u8 const[*]) result.Status
+    set def flush() result.Status
+}
+
+trait ByteSource {
+    set def read_byte() result.Result[i32]
+    set def read_bytes(buffer u8*, size usize, count usize) result.Result[usize]
+}
+
+trait ByteSink {
+    set def write_bytes(buffer u8 const[*], size usize, count usize) result.Result[usize]
+    set def flush() result.Status
+}
+
+def write_to[T TextSink](ref target T, text u8 const[*]) result.Status {
+    ret target.write(text)
+}
+
+def write_line_to[T TextSink](ref target T, text u8 const[*]) result.Status {
+    var status = target.write(text)
+    if status.failed() {
+        ret status
+    }
+
+    ret target.write("\n")
+}
+
+def flush[T TextSink](ref target T) result.Status {
+    ret target.flush()
+}
+
+def read_byte_from[T ByteSource](ref source T) result.Result[i32] {
+    ret source.read_byte()
+}
+
+def read_some[T ByteSource](ref source T, buffer u8*, count usize) result.Result[usize] {
+    ret source.read_bytes(buffer, 1, count)
+}
+
+def write_some[T ByteSink](ref target T, buffer u8 const[*], count usize) result.Result[usize] {
+    ret target.write_bytes(buffer, 1, count)
+}
+
+def copy_once[Source ByteSource, Target ByteSink](ref source Source, ref target Target, buffer u8*, capacity usize) result.Result[usize] {
+    var loaded = read_some[Source](ref source, buffer, capacity)
+    if loaded.failed() && loaded.value == 0 {
+        ret loaded
+    }
+
+    var written = write_some[Target](ref target, cast[u8 const[*]](buffer), loaded.value)
+    if written.failed() {
+        ret written
+    }
+
+    if written.value != loaded.value {
+        ret result.fail_value[usize](written.value, result.ERR_WRITE)
+    }
+
+    if loaded.failed() {
+        ret result.with_status[usize](written.value, loaded.status)
+    }
+
+    ret result.ok_value[usize](written.value)
+}
+
+def copy_all[Source ByteSource, Target ByteSink](ref source Source, ref target Target, buffer u8*, capacity usize) result.Result[usize] {
+    var total usize = 0
+    if capacity == 0 {
+        ret result.ok_value[usize](0)
+    }
+
+    for true {
+        var step = copy_once[Source, Target](ref source, ref target, buffer, capacity)
+        total = total + step.value
+
+        if step.ok() {
+            continue
+        }
+
+        if step.end() {
+            ret result.ok_value[usize](total)
+        }
+
+        ret result.with_status[usize](total, step.status)
+    }
+
+    ret result.ok_value[usize](total)
+}

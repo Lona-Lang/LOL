@@ -1,0 +1,80 @@
+global OK i32 = 0
+global ERR_CLOSED i32 = 1
+global ERR_OPEN i32 = 2
+global ERR_READ i32 = 3
+global ERR_WRITE i32 = 4
+global ERR_FLUSH i32 = 5
+global ERR_CLOSE i32 = 6
+global END i32 = 7
+global ERR_REMOVE i32 = 8
+global ERR_RENAME i32 = 9
+global ERR_TEMP i32 = 10
+
+struct Status {
+    code i32
+
+    def ok() bool {
+        ret self.code == OK
+    }
+
+    def failed() bool {
+        ret self.code != OK
+    }
+
+    def end() bool {
+        ret self.code == END
+    }
+}
+
+struct Result[T] {
+    set value T
+    status Status
+
+    def ok() bool {
+        ret self.status.ok()
+    }
+
+    def failed() bool {
+        ret self.status.failed()
+    }
+
+    def end() bool {
+        ret self.status.end()
+    }
+
+    def code() i32 {
+        ret self.status.code
+    }
+}
+
+def success() Status {
+    ret Status(code = OK)
+}
+
+def failure(code i32) Status {
+    ret Status(code = code)
+}
+
+def ok(status Status) bool {
+    ret status.ok()
+}
+
+def failed(status Status) bool {
+    ret status.failed()
+}
+
+def end(status Status) bool {
+    ret status.end()
+}
+
+def ok_value[T](value T) Result[T] {
+    ret Result[T](value = value, status = success())
+}
+
+def fail_value[T](value T, code i32) Result[T] {
+    ret Result[T](value = value, status = failure(code))
+}
+
+def with_status[T](value T, status Status) Result[T] {
+    ret Result[T](value = value, status = status)
+}

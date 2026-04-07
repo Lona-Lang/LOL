@@ -1,0 +1,54 @@
+struct HostFile
+
+global EOF i32 = -1
+
+#[extern]
+global stdin HostFile*
+
+#[extern]
+global stdout HostFile*
+
+#[extern]
+global stderr HostFile*
+
+#[extern "C"]
+def remove(path u8 const[*]) i32
+
+#[extern "C"]
+def rename(old_path u8 const[*], new_path u8 const[*]) i32
+
+#[extern "C"]
+def tmpfile() HostFile*
+
+#[extern "C"]
+def fopen(path u8 const[*], mode u8 const[*]) HostFile*
+
+#[extern "C"]
+def fclose(stream HostFile*) i32
+
+#[extern "C"]
+def fflush(stream HostFile*) i32
+
+#[extern "C"]
+def fread(buffer u8*, size usize, count usize, stream HostFile*) usize
+
+#[extern "C"]
+def fwrite(buffer u8 const[*], size usize, count usize, stream HostFile*) usize
+
+#[extern "C"]
+def fgetc(stream HostFile*) i32
+
+#[extern "C"]
+def fputc(ch i32, stream HostFile*) i32
+
+#[extern "C"]
+def fputs(text u8 const[*], stream HostFile*) i32
+
+#[extern "C"]
+def clearerr(stream HostFile*)
+
+#[extern "C"]
+def feof(stream HostFile*) i32
+
+#[extern "C"]
+def ferror(stream HostFile*) i32
