@@ -34,6 +34,14 @@ Modules:
 - `string/view`
 - `string/string`
 
+### `algorithm`
+
+Modules:
+
+- `algorithm/order`
+- `algorithm/search`
+- `algorithm/sort`
+
 ## Build
 
 ```bash
@@ -44,6 +52,8 @@ python3 tools/build.py examples/container_vec.lo --run
 python3 tools/build.py examples/container_list.lo --run
 python3 tools/build.py examples/string_basic.lo --run
 python3 tools/build.py examples/string_cow.lo --run
+python3 tools/build.py examples/algorithm_search.lo --run
+python3 tools/build.py examples/algorithm_sort.lo --run
 ```
 
 Direct compiler use:

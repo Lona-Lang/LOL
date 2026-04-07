@@ -1,0 +1,99 @@
+def compare_i32(left i32 const*, right i32 const*) i32 {
+    if *left < *right {
+        ret -1
+    }
+
+    if *left > *right {
+        ret 1
+    }
+
+    ret 0
+}
+
+def compare_i64(left i64 const*, right i64 const*) i32 {
+    if *left < *right {
+        ret -1
+    }
+
+    if *left > *right {
+        ret 1
+    }
+
+    ret 0
+}
+
+def compare_u32(left u32 const*, right u32 const*) i32 {
+    if *left < *right {
+        ret -1
+    }
+
+    if *left > *right {
+        ret 1
+    }
+
+    ret 0
+}
+
+def compare_u64(left u64 const*, right u64 const*) i32 {
+    if *left < *right {
+        ret -1
+    }
+
+    if *left > *right {
+        ret 1
+    }
+
+    ret 0
+}
+
+def compare_usize(left usize const*, right usize const*) i32 {
+    if *left < *right {
+        ret -1
+    }
+
+    if *left > *right {
+        ret 1
+    }
+
+    ret 0
+}
+
+def compare_f64(left f64 const*, right f64 const*) i32 {
+    if *left < *right {
+        ret -1
+    }
+
+    if *left > *right {
+        ret 1
+    }
+
+    ret 0
+}
+
+def min_by[T](left T, right T, compare (T const*, T const*: i32)) T {
+    if compare(&left, &right) <= 0 {
+        ret left
+    }
+
+    ret right
+}
+
+def max_by[T](left T, right T, compare (T const*, T const*: i32)) T {
+    if compare(&left, &right) >= 0 {
+        ret left
+    }
+
+    ret right
+}
+
+def clamp_by[T](value T, lower T, upper T, compare (T const*, T const*: i32)) T {
+    if compare(&value, &lower) < 0 {
+        ret lower
+    }
+
+    if compare(&value, &upper) > 0 {
+        ret upper
+    }
+
+    ret value
+}

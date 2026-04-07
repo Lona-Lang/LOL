@@ -1,0 +1,103 @@
+import container/result
+import container/slice
+import container/vec
+
+def find_ptr_by[T](items slice.Slice[T], needle T const*, equal (T const*, T const*: bool)) T const* {
+    var index usize = 0
+    for index < items.len() {
+        var item = items.at(index)
+        if item != null && equal(item, needle) {
+            ret item
+        }
+
+        index = index + 1
+    }
+
+    ret null
+}
+
+def index_of_by[T](items slice.Slice[T], needle T const*, equal (T const*, T const*: bool)) result.Result[usize] {
+    var index usize = 0
+    for index < items.len() {
+        var item = items.at(index)
+        if item != null && equal(item, needle) {
+            ret result.ok_value[usize](index)
+        }
+
+        index = index + 1
+    }
+
+    ret result.fail_value[usize](0, result.NOT_FOUND)
+}
+
+def contains_by[T](items slice.Slice[T], needle T const*, equal (T const*, T const*: bool)) bool {
+    ret find_ptr_by[T](items, needle, equal) != null
+}
+
+def lower_bound_by[T](items slice.Slice[T], needle T const*, compare (T const*, T const*: i32)) usize {
+    var left usize = 0
+    var right = items.len()
+
+    for left < right {
+        var middle = left + (right - left) / 2
+        var item = items.at(middle)
+        if item == null {
+            ret left
+        }
+
+        if compare(item, needle) < 0 {
+            left = middle + 1
+        } else {
+            right = middle
+        }
+    }
+
+    ret left
+}
+
+def upper_bound_by[T](items slice.Slice[T], needle T const*, compare (T const*, T const*: i32)) usize {
+    var left usize = 0
+    var right = items.len()
+
+    for left < right {
+        var middle = left + (right - left) / 2
+        var item = items.at(middle)
+        if item == null {
+            ret left
+        }
+
+        if compare(item, needle) <= 0 {
+            left = middle + 1
+        } else {
+            right = middle
+        }
+    }
+
+    ret left
+}
+
+def binary_search_by[T](items slice.Slice[T], needle T const*, compare (T const*, T const*: i32)) result.Result[usize] {
+    var index = lower_bound_by[T](items, needle, compare)
+    if index >= items.len() {
+        ret result.fail_value[usize](0, result.NOT_FOUND)
+    }
+
+    var item = items.at(index)
+    if item == null {
+        ret result.fail_value[usize](0, result.NOT_FOUND)
+    }
+
+    if compare(item, needle) == 0 {
+        ret result.ok_value[usize](index)
+    }
+
+    ret result.fail_value[usize](0, result.NOT_FOUND)
+}
+
+def lower_bound_vec_by[T](values vec.Vec[T], needle T const*, compare (T const*, T const*: i32)) usize {
+    ret lower_bound_by[T](values.view(), needle, compare)
+}
+
+def binary_search_vec_by[T](values vec.Vec[T], needle T const*, compare (T const*, T const*: i32)) result.Result[usize] {
+    ret binary_search_by[T](values.view(), needle, compare)
+}

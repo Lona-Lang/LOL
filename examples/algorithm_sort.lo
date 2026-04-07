@@ -1,0 +1,74 @@
+import algorithm/order
+import algorithm/search
+import algorithm/sort
+import container/vec
+
+var values = vec.make[i32]()
+var status = values.reserve(6)
+if status.failed() {
+    values.release()
+    ret status.code
+}
+
+status = values.push(7)
+if status.failed() {
+    values.release()
+    ret status.code
+}
+
+status = values.push(2)
+if status.failed() {
+    values.release()
+    ret status.code
+}
+
+status = values.push(9)
+if status.failed() {
+    values.release()
+    ret status.code
+}
+
+status = values.push(1)
+if status.failed() {
+    values.release()
+    ret status.code
+}
+
+status = values.push(5)
+if status.failed() {
+    values.release()
+    ret status.code
+}
+
+status = values.push(2)
+if status.failed() {
+    values.release()
+    ret status.code
+}
+
+sort.sort_vec_by[i32](ref values, @order.compare_i32)
+if !sort.is_sorted_by[i32](values.data, values.size, @order.compare_i32) {
+    values.release()
+    ret 10
+}
+
+var target i32 = 5
+var found = search.binary_search_vec_by[i32](values, &target, @order.compare_i32)
+if found.failed() {
+    values.release()
+    ret 11
+}
+
+if found.value != 3 {
+    values.release()
+    ret 12
+}
+
+sort.reverse[i32](values.data, values.size)
+if values.data(0) != 9 {
+    values.release()
+    ret 13
+}
+
+values.release()
+ret 0

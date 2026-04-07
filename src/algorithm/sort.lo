@@ -1,0 +1,118 @@
+import container/vec
+
+global INSERTION_LIMIT usize = 16
+
+def reverse[T](data T[*], size usize) {
+    if data == null || size < 2 {
+        ret
+    }
+
+    var left usize = 0
+    var right = size - 1
+    for left < right {
+        _swap_at[T](data, left, right)
+        left = left + 1
+        right = right - 1
+    }
+}
+
+def sort_by[T](data T[*], size usize, compare (T const*, T const*: i32)) {
+    if data == null || size < 2 {
+        ret
+    }
+
+    _sort_range[T](data, 0, size, compare)
+}
+
+def sort_vec_by[T](ref values vec.Vec[T], compare (T const*, T const*: i32)) {
+    if values.data == null || values.size < 2 {
+        ret
+    }
+
+    sort_by[T](values.data, values.size, compare)
+}
+
+def is_sorted_by[T](data T const[*], size usize, compare (T const*, T const*: i32)) bool {
+    if data == null || size < 2 {
+        ret true
+    }
+
+    var index usize = 1
+    for index < size {
+        if compare(&data(index - 1), &data(index)) > 0 {
+            ret false
+        }
+
+        index = index + 1
+    }
+
+    ret true
+}
+
+def _sort_range[T](data T[*], start usize, end usize, compare (T const*, T const*: i32)) {
+    var length = end - start
+    if length < 2 {
+        ret
+    }
+
+    if length <= INSERTION_LIMIT {
+        _insertion_sort[T](data, start, end, compare)
+        ret
+    }
+
+    var pivot = _partition[T](data, start, end, compare)
+    if pivot > start {
+        _sort_range[T](data, start, pivot, compare)
+    }
+
+    if pivot + 1 < end {
+        _sort_range[T](data, pivot + 1, end, compare)
+    }
+}
+
+def _partition[T](data T[*], start usize, end usize, compare (T const*, T const*: i32)) usize {
+    var pivot_index = end - 1
+    var mid = start + (end - start) / 2
+    _swap_at[T](data, mid, pivot_index)
+
+    var store = start
+    var index = start
+    for index < pivot_index {
+        if compare(&data(index), &data(pivot_index)) < 0 {
+            _swap_at[T](data, store, index)
+            store = store + 1
+        }
+
+        index = index + 1
+    }
+
+    _swap_at[T](data, store, pivot_index)
+    ret store
+}
+
+def _insertion_sort[T](data T[*], start usize, end usize, compare (T const*, T const*: i32)) {
+    var index = start + 1
+    for index < end {
+        var scan = index
+        for scan > start {
+            if compare(&data(scan - 1), &data(scan)) <= 0 {
+                break
+            }
+
+            _swap_at[T](data, scan - 1, scan)
+            scan = scan - 1
+        }
+
+        index = index + 1
+    }
+}
+
+def _swap_at[T](data T[*], left usize, right usize) {
+    if left == right {
+        ret
+    }
+
+    var saved = data(left)
+    data(left) = data(right)
+    data(right) = saved
+}

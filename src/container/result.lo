@@ -2,6 +2,7 @@ global OK i32 = 0
 global ERR_EMPTY i32 = 1
 global ERR_ALLOC i32 = 2
 global ERR_RANGE i32 = 3
+global NOT_FOUND i32 = 4
 
 struct Status {
     code i32
@@ -12,6 +13,10 @@ struct Status {
 
     def failed() bool {
         ret self.code != OK
+    }
+
+    def missing() bool {
+        ret self.code == NOT_FOUND
     }
 }
 
@@ -25,6 +30,10 @@ struct Result[T] {
 
     def failed() bool {
         ret self.status.failed()
+    }
+
+    def missing() bool {
+        ret self.status.missing()
     }
 
     def code() i32 {
