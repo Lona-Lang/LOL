@@ -1,0 +1,357 @@
+import string/_c
+import string/result
+
+struct View {
+    data u8 const[*]
+    size usize
+
+    def len() usize {
+        ret self.size
+    }
+
+    def is_empty() bool {
+        ret self.size == 0
+    }
+
+    def at(index usize) u8 const* {
+        if self.data == null || index >= self.size {
+            ret null
+        }
+
+        ret &self.data(index)
+    }
+
+    def read(index usize) result.Result[u8] {
+        var item = self.at(index)
+        if item == null {
+            ret result.fail_value[u8](0, result.ERR_RANGE)
+        }
+
+        ret result.ok_value[u8](*item)
+    }
+
+    def first() u8 const* {
+        ret self.at(0)
+    }
+
+    def read_first() result.Result[u8] {
+        ret self.read(0)
+    }
+
+    def last() u8 const* {
+        if self.size == 0 {
+            ret null
+        }
+
+        ret self.at(self.size - 1)
+    }
+
+    def read_last() result.Result[u8] {
+        if self.size == 0 {
+            ret result.fail_value[u8](0, result.ERR_RANGE)
+        }
+
+        ret self.read(self.size - 1)
+    }
+
+    def slice(start usize, count usize) result.Result[View] {
+        if start > self.size {
+            ret result.fail_value[View](empty(), result.ERR_RANGE)
+        }
+
+        var remaining = self.size - start
+        if count > remaining {
+            ret result.fail_value[View](empty(), result.ERR_RANGE)
+        }
+
+        if count == 0 {
+            ret result.ok_value[View](empty())
+        }
+
+        var part u8 const[*] = &self.data(start)
+        ret result.ok_value[View](from_ptr(part, count))
+    }
+
+    def substring(start usize, count usize) result.Result[View] {
+        ret self.slice(start, count)
+    }
+
+    def take(count usize) View {
+        if count >= self.size {
+            ret from_ptr(self.data, self.size)
+        }
+
+        var part = self.slice(0, count)
+        ret part.value
+    }
+
+    def drop(count usize) View {
+        if count >= self.size {
+            ret empty()
+        }
+
+        var part = self.slice(count, self.size - count)
+        ret part.value
+    }
+
+    def trim_start() View {
+        var index usize = 0
+        for index < self.size {
+            if !_ascii_space(self.data(index)) {
+                break
+            }
+
+            index = index + 1
+        }
+
+        ret self.drop(index)
+    }
+
+    def trim_end() View {
+        var end = self.size
+        for end > 0 {
+            if !_ascii_space(self.data(end - 1)) {
+                break
+            }
+
+            end = end - 1
+        }
+
+        var part = self.slice(0, end)
+        ret part.value
+    }
+
+    def trim() View {
+        ret self.trim_start().trim_end()
+    }
+
+    def equals(other View) bool {
+        if self.size != other.size {
+            ret false
+        }
+
+        var index usize = 0
+        for index < self.size {
+            if self.data(index) != other.data(index) {
+                ret false
+            }
+
+            index = index + 1
+        }
+
+        ret true
+    }
+
+    def equals_ignore_ascii_case(other View) bool {
+        if self.size != other.size {
+            ret false
+        }
+
+        var index usize = 0
+        for index < self.size {
+            if _ascii_lower(self.data(index)) != _ascii_lower(other.data(index)) {
+                ret false
+            }
+
+            index = index + 1
+        }
+
+        ret true
+    }
+
+    def compare(other View) i32 {
+        var shared = self.size
+        if other.size < shared {
+            shared = other.size
+        }
+
+        var index usize = 0
+        for index < shared {
+            if self.data(index) < other.data(index) {
+                ret -1
+            }
+
+            if self.data(index) > other.data(index) {
+                ret 1
+            }
+
+            index = index + 1
+        }
+
+        if self.size < other.size {
+            ret -1
+        }
+
+        if self.size > other.size {
+            ret 1
+        }
+
+        ret 0
+    }
+
+    def starts_with(prefix View) bool {
+        if prefix.size > self.size {
+            ret false
+        }
+
+        ret _match_at(*self, 0, prefix)
+    }
+
+    def ends_with(suffix View) bool {
+        if suffix.size > self.size {
+            ret false
+        }
+
+        ret _match_at(*self, self.size - suffix.size, suffix)
+    }
+
+    def contains(needle View) bool {
+        ret self.index_of(needle).ok()
+    }
+
+    def index_of(needle View) result.Result[usize] {
+        if needle.size == 0 {
+            ret result.ok_value[usize](0)
+        }
+
+        if needle.size > self.size {
+            ret result.fail_value[usize](0, result.NOT_FOUND)
+        }
+
+        var count = self.size - needle.size + 1
+        var index usize = 0
+        for index < count {
+            if _match_at(*self, index, needle) {
+                ret result.ok_value[usize](index)
+            }
+
+            index = index + 1
+        }
+
+        ret result.fail_value[usize](0, result.NOT_FOUND)
+    }
+
+    def last_index_of(needle View) result.Result[usize] {
+        if needle.size == 0 {
+            ret result.ok_value[usize](self.size)
+        }
+
+        if needle.size > self.size {
+            ret result.fail_value[usize](0, result.NOT_FOUND)
+        }
+
+        var index = self.size - needle.size + 1
+        for index > 0 {
+            index = index - 1
+            if _match_at(*self, index, needle) {
+                ret result.ok_value[usize](index)
+            }
+        }
+
+        ret result.fail_value[usize](0, result.NOT_FOUND)
+    }
+
+    def split_once(separator View) result.Result[SplitView] {
+        if separator.is_empty() {
+            ret result.fail_value[SplitView](SplitView(left = empty(), right = empty()), result.ERR_RANGE)
+        }
+
+        var found = self.index_of(separator)
+        if found.failed() {
+            ret result.fail_value[SplitView](SplitView(left = empty(), right = empty()), found.code())
+        }
+
+        var left = self.take(found.value)
+        var right = self.drop(found.value + separator.len())
+        ret result.ok_value[SplitView](SplitView(left = left, right = right))
+    }
+
+    def rsplit_once(separator View) result.Result[SplitView] {
+        if separator.is_empty() {
+            ret result.fail_value[SplitView](SplitView(left = empty(), right = empty()), result.ERR_RANGE)
+        }
+
+        var found = self.last_index_of(separator)
+        if found.failed() {
+            ret result.fail_value[SplitView](SplitView(left = empty(), right = empty()), found.code())
+        }
+
+        var left = self.take(found.value)
+        var right = self.drop(found.value + separator.len())
+        ret result.ok_value[SplitView](SplitView(left = left, right = right))
+    }
+}
+
+struct SplitView {
+    left View
+    right View
+}
+
+def empty() View {
+    ret View(data = null, size = 0)
+}
+
+def from_ptr(data u8 const[*], size usize) View {
+    if data == null || size == 0 {
+        ret empty()
+    }
+
+    ret View(data = data, size = size)
+}
+
+def from_bytes(data u8 const[*], size usize) View {
+    ret from_ptr(data, size)
+}
+
+def from_cstr(text u8 const[*]) View {
+    if text == null {
+        ret empty()
+    }
+
+    ret from_ptr(text, _c.strlen(text))
+}
+
+def from_literal(text u8 const[*]) View {
+    ret from_cstr(text)
+}
+
+def _ascii_space(ch u8) bool {
+    if ch == ' ' {
+        ret true
+    }
+
+    if ch == '\t' {
+        ret true
+    }
+
+    if ch == '\n' {
+        ret true
+    }
+
+    ret ch == '\r'
+}
+
+def _ascii_lower(ch u8) u8 {
+    if ch >= 'A' && ch <= 'Z' {
+        ret ch - 'A' + 'a'
+    }
+
+    ret ch
+}
+
+def _match_at(source View, start usize, part View) bool {
+    if part.size == 0 {
+        ret true
+    }
+
+    var index usize = 0
+    for index < part.size {
+        if source.data(start + index) != part.data(index) {
+            ret false
+        }
+
+        index = index + 1
+    }
+
+    ret true
+}

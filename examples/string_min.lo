@@ -1,0 +1,10 @@
+import string/string
+
+var loaded = string.from_literal("hi")
+if loaded.failed() {
+    ret loaded.code()
+}
+
+var text = loaded.value
+text.release()
+ret 0

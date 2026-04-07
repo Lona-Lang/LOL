@@ -1,0 +1,8 @@
+#[extern "C"]
+def malloc(size usize) u8*
+
+#[extern "C"]
+def free(ptr u8*)
+
+#[extern "C"]
+def strlen(text u8 const[*]) usize

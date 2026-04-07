@@ -1,0 +1,213 @@
+import string/string
+import string/view
+
+var loaded = string.from_literal("  hello lona  ")
+if loaded.failed() {
+    ret loaded.code()
+}
+
+var text = loaded.value
+var status = text.trim()
+if status.failed() {
+    text.release()
+    ret status.code
+}
+
+if !text.equals(view.from_literal("hello lona")) {
+    text.release()
+    ret 10
+}
+
+if !text.equals_ignore_ascii_case(view.from_literal("HELLO LONA")) {
+    text.release()
+    ret 23
+}
+
+var shout = text.upper_ascii()
+if shout.failed() {
+    text.release()
+    ret shout.code()
+}
+
+var loud = shout.value
+if !loud.equals(view.from_literal("HELLO LONA")) {
+    loud.release()
+    text.release()
+    ret 19
+}
+
+var quiet = loud.lower_ascii()
+if quiet.failed() {
+    loud.release()
+    text.release()
+    ret quiet.code()
+}
+
+var back = quiet.value
+if !back.equals(view.from_literal("hello lona")) {
+    back.release()
+    loud.release()
+    text.release()
+    ret 20
+}
+
+back.release()
+loud.release()
+
+if !text.starts_with(view.from_literal("hello")) {
+    text.release()
+    ret 11
+}
+
+if !text.ends_with(view.from_literal("lona")) {
+    text.release()
+    ret 12
+}
+
+var split = text.index_of(view.from_literal(" "))
+if split.failed() {
+    text.release()
+    ret 13
+}
+
+var last = text.last_index_of(view.from_literal("o"))
+if last.failed() {
+    text.release()
+    ret 14
+}
+
+if split.value != 5 {
+    text.release()
+    ret 15
+}
+
+if last.value != 7 {
+    text.release()
+    ret 16
+}
+
+var first = text.replace_first(view.from_literal(" "), view.from_literal("-"))
+if first.failed() {
+    text.release()
+    ret first.code()
+}
+
+var dashed = first.value
+if !dashed.equals(view.from_literal("hello-lona")) {
+    dashed.release()
+    text.release()
+    ret 21
+}
+
+var sentence = dashed.replace_all(view.from_literal("o"), view.from_literal("0"))
+if sentence.failed() {
+    dashed.release()
+    text.release()
+    ret sentence.code()
+}
+
+var normalized = sentence.value
+if !normalized.equals(view.from_literal("hell0-l0na")) {
+    normalized.release()
+    dashed.release()
+    text.release()
+    ret 22
+}
+
+var split_once = text.split_once(view.from_literal(" "))
+if split_once.failed() {
+    normalized.release()
+    dashed.release()
+    text.release()
+    ret split_once.code()
+}
+
+var pair = split_once.value
+if !pair.left.equals(view.from_literal("hello")) {
+    pair.left.release()
+    pair.right.release()
+    normalized.release()
+    dashed.release()
+    text.release()
+    ret 24
+}
+
+if !pair.right.equals(view.from_literal("lona")) {
+    pair.left.release()
+    pair.right.release()
+    normalized.release()
+    dashed.release()
+    text.release()
+    ret 25
+}
+
+var echoed = pair.left.repeat(3)
+if echoed.failed() {
+    pair.left.release()
+    pair.right.release()
+    normalized.release()
+    dashed.release()
+    text.release()
+    ret echoed.code()
+}
+
+var repeated = echoed.value
+if !repeated.equals(view.from_literal("hellohellohello")) {
+    repeated.release()
+    pair.left.release()
+    pair.right.release()
+    normalized.release()
+    dashed.release()
+    text.release()
+    ret 26
+}
+
+repeated.release()
+pair.left.release()
+pair.right.release()
+
+status = text.replace(split.value, 1, view.from_literal("-"))
+if status.failed() {
+    normalized.release()
+    dashed.release()
+    text.release()
+    ret status.code
+}
+
+status = text.append(view.from_literal(" library"))
+if status.failed() {
+    normalized.release()
+    dashed.release()
+    text.release()
+    ret status.code
+}
+
+if !text.equals(view.from_literal("hello-lona library")) {
+    normalized.release()
+    dashed.release()
+    text.release()
+    ret 17
+}
+
+var part = text.substring(6, 4)
+if part.failed() {
+    normalized.release()
+    dashed.release()
+    text.release()
+    ret part.code()
+}
+
+var middle = part.value
+if !middle.equals(view.from_literal("lona")) {
+    middle.release()
+    normalized.release()
+    dashed.release()
+    text.release()
+    ret 18
+}
+
+middle.release()
+normalized.release()
+dashed.release()
+text.release()
+ret 0

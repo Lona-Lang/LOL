@@ -26,6 +26,14 @@ Modules:
 - `container/vec`
 - `container/list`
 
+### `string`
+
+Modules:
+
+- `string/result`
+- `string/view`
+- `string/string`
+
 ## Build
 
 ```bash
@@ -34,6 +42,8 @@ python3 tools/build.py examples/write_file.lo --run
 python3 tools/build.py examples/copy_file.lo --run
 python3 tools/build.py examples/container_vec.lo --run
 python3 tools/build.py examples/container_list.lo --run
+python3 tools/build.py examples/string_basic.lo --run
+python3 tools/build.py examples/string_cow.lo --run
 ```
 
 Direct compiler use:

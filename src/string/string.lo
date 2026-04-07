@@ -1,0 +1,862 @@
+import string/_c
+import string/result
+import string/view
+
+struct _Storage {
+    set refs usize
+    set size usize
+    set capacity usize
+    set bytes u8[*]
+}
+
+// String owns shared storage and detaches before mutation.
+struct String {
+    storage _Storage*
+
+    def len() usize {
+        if self.storage == null {
+            ret 0
+        }
+
+        ret self.storage.size
+    }
+
+    def cap() usize {
+        if self.storage == null {
+            ret 0
+        }
+
+        ret self.storage.capacity
+    }
+
+    def is_empty() bool {
+        ret self.len() == 0
+    }
+
+    def shared() bool {
+        if self.storage == null {
+            ret false
+        }
+
+        ret self.storage.refs > 1
+    }
+
+    def unique() bool {
+        ret !self.shared()
+    }
+
+    def at(index usize) u8 const* {
+        ret self.view().at(index)
+    }
+
+    def read(index usize) result.Result[u8] {
+        ret self.view().read(index)
+    }
+
+    def first() u8 const* {
+        ret self.view().first()
+    }
+
+    def read_first() result.Result[u8] {
+        ret self.view().read_first()
+    }
+
+    def last() u8 const* {
+        ret self.view().last()
+    }
+
+    def read_last() result.Result[u8] {
+        ret self.view().read_last()
+    }
+
+    def view() view.View {
+        if self.storage == null {
+            ret view.empty()
+        }
+
+        var bytes u8 const[*] = self.storage.bytes
+        ret view.from_ptr(bytes, self.storage.size)
+    }
+
+    def c_str() u8 const[*] {
+        if self.storage == null {
+            ret ""
+        }
+
+        var bytes u8 const[*] = self.storage.bytes
+        ret bytes
+    }
+
+    def equals(other view.View) bool {
+        ret self.view().equals(other)
+    }
+
+    def equals_ignore_ascii_case(other view.View) bool {
+        ret self.view().equals_ignore_ascii_case(other)
+    }
+
+    def compare(other view.View) i32 {
+        ret self.view().compare(other)
+    }
+
+    def starts_with(prefix view.View) bool {
+        ret self.view().starts_with(prefix)
+    }
+
+    def ends_with(suffix view.View) bool {
+        ret self.view().ends_with(suffix)
+    }
+
+    def contains(part view.View) bool {
+        ret self.view().contains(part)
+    }
+
+    def index_of(part view.View) result.Result[usize] {
+        ret self.view().index_of(part)
+    }
+
+    def last_index_of(part view.View) result.Result[usize] {
+        ret self.view().last_index_of(part)
+    }
+
+    def share() String {
+        if self.storage != null {
+            self.storage.refs = self.storage.refs + 1
+        }
+
+        ret String(storage = self.storage)
+    }
+
+    def clone() result.Result[String] {
+        ret from_view(self.view())
+    }
+
+    def slice(start usize, count usize) result.Result[String] {
+        var part = self.view().slice(start, count)
+        if part.failed() {
+            ret result.fail_value[String](empty(), part.code())
+        }
+
+        ret from_view(part.value)
+    }
+
+    def substring(start usize, count usize) result.Result[String] {
+        ret self.slice(start, count)
+    }
+
+    def take(count usize) result.Result[String] {
+        ret from_view(self.view().take(count))
+    }
+
+    def drop(count usize) result.Result[String] {
+        ret from_view(self.view().drop(count))
+    }
+
+    def trimmed() result.Result[String] {
+        ret from_view(self.view().trim())
+    }
+
+    def concat(part view.View) result.Result[String] {
+        var next = self.clone()
+        if next.failed() {
+            ret next
+        }
+
+        var value = next.value
+        var status = value.append(part)
+        if status.failed() {
+            value.release()
+            ret result.fail_value[String](empty(), status.code)
+        }
+
+        ret result.ok_value[String](value)
+    }
+
+    def split_once(separator view.View) result.Result[SplitString] {
+        var parts = self.view().split_once(separator)
+        if parts.failed() {
+            ret result.fail_value[SplitString](_empty_split(), parts.code())
+        }
+
+        var left = from_view(parts.value.left)
+        if left.failed() {
+            ret result.fail_value[SplitString](_empty_split(), left.code())
+        }
+
+        var right = from_view(parts.value.right)
+        if right.failed() {
+            var keep = left.value
+            keep.release()
+            ret result.fail_value[SplitString](_empty_split(), right.code())
+        }
+
+        ret result.ok_value[SplitString](SplitString(left = left.value, right = right.value))
+    }
+
+    def rsplit_once(separator view.View) result.Result[SplitString] {
+        var parts = self.view().rsplit_once(separator)
+        if parts.failed() {
+            ret result.fail_value[SplitString](_empty_split(), parts.code())
+        }
+
+        var left = from_view(parts.value.left)
+        if left.failed() {
+            ret result.fail_value[SplitString](_empty_split(), left.code())
+        }
+
+        var right = from_view(parts.value.right)
+        if right.failed() {
+            var keep = left.value
+            keep.release()
+            ret result.fail_value[SplitString](_empty_split(), right.code())
+        }
+
+        ret result.ok_value[SplitString](SplitString(left = left.value, right = right.value))
+    }
+
+    def replace_first(needle view.View, replacement view.View) result.Result[String] {
+        if needle.is_empty() {
+            ret result.fail_value[String](empty(), result.ERR_RANGE)
+        }
+
+        var found = self.index_of(needle)
+        if found.missing() {
+            ret self.clone()
+        }
+
+        if found.failed() {
+            ret result.fail_value[String](empty(), found.code())
+        }
+
+        var next = self.clone()
+        if next.failed() {
+            ret next
+        }
+
+        var value = next.value
+        var status = value.replace(found.value, needle.len(), replacement)
+        if status.failed() {
+            value.release()
+            ret result.fail_value[String](empty(), status.code)
+        }
+
+        ret result.ok_value[String](value)
+    }
+
+    def repeat(times usize) result.Result[String] {
+        if times == 0 || self.is_empty() {
+            ret result.ok_value[String](empty())
+        }
+
+        if times == 1 {
+            ret self.clone()
+        }
+
+        var built = empty()
+        var status = built.reserve(self.len() * times)
+        if status.failed() {
+            ret result.fail_value[String](empty(), status.code)
+        }
+
+        var count usize = 0
+        var part = self.view()
+        for count < times {
+            status = built.append(part)
+            if status.failed() {
+                built.release()
+                ret result.fail_value[String](empty(), status.code)
+            }
+
+            count = count + 1
+        }
+
+        ret result.ok_value[String](built)
+    }
+
+    def replace_all(needle view.View, replacement view.View) result.Result[String] {
+        if needle.is_empty() {
+            ret result.fail_value[String](empty(), result.ERR_RANGE)
+        }
+
+        var found = self.index_of(needle)
+        if found.missing() {
+            ret self.clone()
+        }
+
+        if found.failed() {
+            ret result.fail_value[String](empty(), found.code())
+        }
+
+        var source = self.view()
+        var built = empty()
+        var cursor usize = 0
+        for cursor < source.len() {
+            var tail = source.drop(cursor)
+            var next = tail.index_of(needle)
+            if next.missing() {
+                var rest = source.slice(cursor, source.len() - cursor)
+                if rest.failed() {
+                    built.release()
+                    ret result.fail_value[String](empty(), rest.code())
+                }
+
+                var status = built.append(rest.value)
+                if status.failed() {
+                    built.release()
+                    ret result.fail_value[String](empty(), status.code)
+                }
+
+                ret result.ok_value[String](built)
+            }
+
+            if next.failed() {
+                built.release()
+                ret result.fail_value[String](empty(), next.code())
+            }
+
+            var index = cursor + next.value
+            var part = source.slice(cursor, index - cursor)
+            if part.failed() {
+                built.release()
+                ret result.fail_value[String](empty(), part.code())
+            }
+
+            var status = built.append(part.value)
+            if status.failed() {
+                built.release()
+                ret result.fail_value[String](empty(), status.code)
+            }
+
+            status = built.append(replacement)
+            if status.failed() {
+                built.release()
+                ret result.fail_value[String](empty(), status.code)
+            }
+
+            cursor = index + needle.len()
+        }
+
+        ret result.ok_value[String](built)
+    }
+
+    def lower_ascii() result.Result[String] {
+        var next = self.clone()
+        if next.failed() {
+            ret next
+        }
+
+        var value = next.value
+        var status = value.make_lower_ascii()
+        if status.failed() {
+            value.release()
+            ret result.fail_value[String](empty(), status.code)
+        }
+
+        ret result.ok_value[String](value)
+    }
+
+    def upper_ascii() result.Result[String] {
+        var next = self.clone()
+        if next.failed() {
+            ret next
+        }
+
+        var value = next.value
+        var status = value.make_upper_ascii()
+        if status.failed() {
+            value.release()
+            ret result.fail_value[String](empty(), status.code)
+        }
+
+        ret result.ok_value[String](value)
+    }
+
+    set def reserve(min_capacity usize) result.Status {
+        ret self._ensure_capacity(min_capacity)
+    }
+
+    set def clear() result.Status {
+        if self.storage == null {
+            ret result.success()
+        }
+
+        if self.storage.refs > 1 {
+            _release_storage(self.storage)
+            self.storage = null
+            ret result.success()
+        }
+
+        self.storage.size = 0
+        self.storage.bytes(0) = 0
+        ret result.success()
+    }
+
+    set def push(byte u8) result.Status {
+        var current = self.len()
+        var status = self._ensure_capacity(current + 1)
+        if status.failed() {
+            ret status
+        }
+
+        self.storage.bytes(current) = byte
+        self.storage.size = current + 1
+        self.storage.bytes(self.storage.size) = 0
+        ret result.success()
+    }
+
+    set def set_byte(index usize, byte u8) result.Status {
+        var current = self.len()
+        if index >= current {
+            ret result.failure(result.ERR_RANGE)
+        }
+
+        var status = self._ensure_capacity(current)
+        if status.failed() {
+            ret status
+        }
+
+        self.storage.bytes(index) = byte
+        ret result.success()
+    }
+
+    set def assign(part view.View) result.Status {
+        var status = self.clear()
+        if status.failed() {
+            ret status
+        }
+
+        ret self.append(part)
+    }
+
+    set def append(part view.View) result.Status {
+        if part.is_empty() {
+            ret result.success()
+        }
+
+        var copied = from_view(part)
+        if copied.failed() {
+            ret result.failure(copied.code())
+        }
+
+        var safe = copied.value
+        var status = self._append_ready(safe.view())
+        safe.release()
+        ret status
+    }
+
+    set def prepend(part view.View) result.Status {
+        ret self.insert(0, part)
+    }
+
+    set def insert(index usize, part view.View) result.Status {
+        if part.is_empty() {
+            if index > self.len() {
+                ret result.failure(result.ERR_RANGE)
+            }
+
+            ret result.success()
+        }
+
+        var copied = from_view(part)
+        if copied.failed() {
+            ret result.failure(copied.code())
+        }
+
+        var safe = copied.value
+        var status = self._insert_ready(index, safe.view())
+        safe.release()
+        ret status
+    }
+
+    set def remove(index usize, count usize) result.Status {
+        var current = self.len()
+        if index > current {
+            ret result.failure(result.ERR_RANGE)
+        }
+
+        var remaining = current - index
+        if count > remaining {
+            ret result.failure(result.ERR_RANGE)
+        }
+
+        if count == 0 {
+            ret result.success()
+        }
+
+        var status = self._ensure_capacity(current)
+        if status.failed() {
+            ret status
+        }
+
+        var read = index + count
+        for read < current {
+            self.storage.bytes(read - count) = self.storage.bytes(read)
+            read = read + 1
+        }
+
+        self.storage.size = current - count
+        self.storage.bytes(self.storage.size) = 0
+        ret result.success()
+    }
+
+    set def truncate(size usize) result.Status {
+        var current = self.len()
+        if size > current {
+            ret result.failure(result.ERR_RANGE)
+        }
+
+        var status = self._ensure_capacity(current)
+        if status.failed() {
+            ret status
+        }
+
+        self.storage.size = size
+        self.storage.bytes(size) = 0
+        ret result.success()
+    }
+
+    set def replace(index usize, count usize, part view.View) result.Status {
+        var current = self.len()
+        if index > current {
+            ret result.failure(result.ERR_RANGE)
+        }
+
+        var remaining = current - index
+        if count > remaining {
+            ret result.failure(result.ERR_RANGE)
+        }
+
+        var copied = from_view(part)
+        if copied.failed() {
+            ret result.failure(copied.code())
+        }
+
+        var safe = copied.value
+        var status = self._replace_ready(index, count, safe.view())
+        safe.release()
+        ret status
+    }
+
+    set def trim_start() result.Status {
+        var part = self.view().trim_start()
+        var start = self.len() - part.len()
+        if start == 0 {
+            ret result.success()
+        }
+
+        ret self.remove(0, start)
+    }
+
+    set def trim_end() result.Status {
+        var part = self.view().trim_end()
+        if part.len() == self.len() {
+            ret result.success()
+        }
+
+        ret self.remove(part.len(), self.len() - part.len())
+    }
+
+    set def trim() result.Status {
+        var status = self.trim_end()
+        if status.failed() {
+            ret status
+        }
+
+        ret self.trim_start()
+    }
+
+    set def make_lower_ascii() result.Status {
+        var current = self.len()
+        var status = self._ensure_capacity(current)
+        if status.failed() {
+            ret status
+        }
+
+        var index usize = 0
+        for index < current {
+            self.storage.bytes(index) = _ascii_lower(self.storage.bytes(index))
+            index = index + 1
+        }
+
+        ret result.success()
+    }
+
+    set def make_upper_ascii() result.Status {
+        var current = self.len()
+        var status = self._ensure_capacity(current)
+        if status.failed() {
+            ret status
+        }
+
+        var index usize = 0
+        for index < current {
+            self.storage.bytes(index) = _ascii_upper(self.storage.bytes(index))
+            index = index + 1
+        }
+
+        ret result.success()
+    }
+
+    set def release() {
+        _release_storage(self.storage)
+        self.storage = null
+    }
+
+    set def _ensure_capacity(min_capacity usize) result.Status {
+        var required = min_capacity
+        if self.storage != null && self.storage.size > required {
+            required = self.storage.size
+        }
+
+        if required == 0 {
+            if self.storage == null {
+                ret result.success()
+            }
+
+            if self.storage.refs == 1 {
+                ret result.success()
+            }
+
+            var detached = _copy_storage(self.storage, self.storage.size)
+            if detached == null {
+                ret result.failure(result.ERR_ALLOC)
+            }
+
+            _release_storage(self.storage)
+            self.storage = detached
+            ret result.success()
+        }
+
+        if self.storage != null && self.storage.refs == 1 && required <= self.storage.capacity {
+            ret result.success()
+        }
+
+        var base usize = 0
+        if self.storage != null {
+            base = self.storage.capacity
+        }
+
+        var next_capacity = _grow_capacity(base, required)
+        var source _Storage* = self.storage
+        if source != null && source.size > next_capacity {
+            next_capacity = source.size
+        }
+
+        var detached = _copy_storage(source, next_capacity)
+        if detached == null {
+            ret result.failure(result.ERR_ALLOC)
+        }
+
+        _release_storage(self.storage)
+        self.storage = detached
+        ret result.success()
+    }
+
+    set def _append_ready(part view.View) result.Status {
+        var current = self.len()
+        var status = self._ensure_capacity(current + part.len())
+        if status.failed() {
+            ret status
+        }
+
+        _copy_bytes(self.storage.bytes, current, part.data, part.len())
+        self.storage.size = current + part.len()
+        self.storage.bytes(self.storage.size) = 0
+        ret result.success()
+    }
+
+    set def _insert_ready(index usize, part view.View) result.Status {
+        var current = self.len()
+        if index > current {
+            ret result.failure(result.ERR_RANGE)
+        }
+
+        if part.is_empty() {
+            ret result.success()
+        }
+
+        var status = self._ensure_capacity(current + part.len())
+        if status.failed() {
+            ret status
+        }
+
+        var read = current
+        for read > index {
+            read = read - 1
+            self.storage.bytes(read + part.len()) = self.storage.bytes(read)
+        }
+
+        _copy_bytes(self.storage.bytes, index, part.data, part.len())
+        self.storage.size = current + part.len()
+        self.storage.bytes(self.storage.size) = 0
+        ret result.success()
+    }
+
+    set def _replace_ready(index usize, count usize, part view.View) result.Status {
+        var current = self.len()
+        var next_size = current - count + part.len()
+        var status = self._ensure_capacity(next_size)
+        if status.failed() {
+            ret status
+        }
+
+        if part.len() > count {
+            var grow = part.len() - count
+            var read = current
+            for read > index + count {
+                read = read - 1
+                self.storage.bytes(read + grow) = self.storage.bytes(read)
+            }
+        } else if part.len() < count {
+            var shrink = count - part.len()
+            var read = index + count
+            for read < current {
+                self.storage.bytes(read - shrink) = self.storage.bytes(read)
+                read = read + 1
+            }
+        }
+
+        _copy_bytes(self.storage.bytes, index, part.data, part.len())
+        self.storage.size = next_size
+        self.storage.bytes(self.storage.size) = 0
+        ret result.success()
+    }
+}
+
+struct SplitString {
+    set left String
+    set right String
+}
+
+def empty() String {
+    ret String(storage = null)
+}
+
+def from_view(source view.View) result.Result[String] {
+    if source.is_empty() {
+        ret result.ok_value[String](empty())
+    }
+
+    var storage = _new_storage(source.len())
+    if storage == null {
+        ret result.fail_value[String](empty(), result.ERR_ALLOC)
+    }
+
+    _copy_bytes(storage.bytes, 0, source.data, source.len())
+    storage.size = source.len()
+    storage.bytes(storage.size) = 0
+    ret result.ok_value[String](String(storage = storage))
+}
+
+def from_bytes(data u8 const[*], size usize) result.Result[String] {
+    ret from_view(view.from_ptr(data, size))
+}
+
+def from_cstr(text u8 const[*]) result.Result[String] {
+    ret from_view(view.from_cstr(text))
+}
+
+def from_literal(text u8 const[*]) result.Result[String] {
+    ret from_cstr(text)
+}
+
+def _empty_split() SplitString {
+    ret SplitString(left = empty(), right = empty())
+}
+
+def _new_storage(capacity usize) _Storage* {
+    var raw = _c.malloc(sizeof[_Storage]())
+    if raw == null {
+        ret null
+    }
+
+    var bytes = _c.malloc(capacity + 1)
+    if bytes == null {
+        _c.free(raw)
+        ret null
+    }
+
+    var storage _Storage* = cast[_Storage*](raw)
+    storage.refs = 1
+    storage.size = 0
+    storage.capacity = capacity
+    storage.bytes = cast[u8[*]](bytes)
+    storage.bytes(0) = 0
+    ret storage
+}
+
+def _copy_storage(source _Storage*, capacity usize) _Storage* {
+    if source == null {
+        if capacity == 0 {
+            ret null
+        }
+
+        ret _new_storage(capacity)
+    }
+
+    var required = capacity
+    if source.size > required {
+        required = source.size
+    }
+
+    var storage = _new_storage(required)
+    if storage == null {
+        ret null
+    }
+
+    _copy_bytes(storage.bytes, 0, source.bytes, source.size)
+    storage.size = source.size
+    storage.bytes(storage.size) = 0
+    ret storage
+}
+
+def _release_storage(storage _Storage*) {
+    if storage == null {
+        ret
+    }
+
+    if storage.refs > 1 {
+        storage.refs = storage.refs - 1
+        ret
+    }
+
+    _c.free(cast[u8*](storage.bytes))
+    _c.free(cast[u8*](storage))
+}
+
+def _grow_capacity(current usize, required usize) usize {
+    var next_capacity = current
+    if next_capacity == 0 {
+        next_capacity = 8
+    }
+
+    for next_capacity < required {
+        next_capacity = next_capacity * 2
+    }
+
+    ret next_capacity
+}
+
+def _copy_bytes(target u8[*], start usize, source u8 const[*], count usize) {
+    var index usize = 0
+    for index < count {
+        target(start + index) = source(index)
+        index = index + 1
+    }
+}
+
+def _ascii_lower(ch u8) u8 {
+    if ch >= 'A' && ch <= 'Z' {
+        ret ch - 'A' + 'a'
+    }
+
+    ret ch
+}
+
+def _ascii_upper(ch u8) u8 {
+    if ch >= 'a' && ch <= 'z' {
+        ret ch - 'a' + 'A'
+    }
+
+    ret ch
+}

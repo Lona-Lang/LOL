@@ -1,0 +1,36 @@
+import string/view
+
+var text = view.from_literal("  hello view  ")
+var part = text.trim()
+
+if !part.equals(view.from_literal("hello view")) {
+    ret 10
+}
+
+if !part.equals_ignore_ascii_case(view.from_literal("HELLO VIEW")) {
+    ret 13
+}
+
+var split = part.index_of(view.from_literal(" "))
+if split.failed() {
+    ret 11
+}
+
+if split.value != 5 {
+    ret 12
+}
+
+var pieces = part.split_once(view.from_literal(" "))
+if pieces.failed() {
+    ret pieces.code()
+}
+
+if !pieces.value.left.equals(view.from_literal("hello")) {
+    ret 14
+}
+
+if !pieces.value.right.equals(view.from_literal("view")) {
+    ret 15
+}
+
+ret 0
