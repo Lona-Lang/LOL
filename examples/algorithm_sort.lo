@@ -4,47 +4,13 @@ import algorithm/sort
 import container/vec
 
 var values = vec.make[i32]()
-var status = values.reserve(6)
-if status.failed() {
-    values.release()
-    ret status.code
-}
-
-status = values.push(7)
-if status.failed() {
-    values.release()
-    ret status.code
-}
-
-status = values.push(2)
-if status.failed() {
-    values.release()
-    ret status.code
-}
-
-status = values.push(9)
-if status.failed() {
-    values.release()
-    ret status.code
-}
-
-status = values.push(1)
-if status.failed() {
-    values.release()
-    ret status.code
-}
-
-status = values.push(5)
-if status.failed() {
-    values.release()
-    ret status.code
-}
-
-status = values.push(2)
-if status.failed() {
-    values.release()
-    ret status.code
-}
+values.reserve(6)
+values.push(7)
+values.push(2)
+values.push(9)
+values.push(1)
+values.push(5)
+values.push(2)
 
 sort.sort_vec_by[i32](ref values, @order.compare_i32)
 if !sort.is_sorted_by[i32](values.data, values.size, @order.compare_i32) {

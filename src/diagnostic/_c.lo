@@ -1,0 +1,5 @@
+#[extern "C"]
+def abort()
+
+#[extern "C"]
+def exit(code i32)

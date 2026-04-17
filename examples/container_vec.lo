@@ -1,23 +1,9 @@
-import container/result
 import container/vec
 
 var values = vec.make[i32]()
-var status = values.push(10)
-if status.failed() {
-    ret status.code
-}
-
-status = values.push(20)
-if status.failed() {
-    values.release()
-    ret status.code
-}
-
-status = values.push(30)
-if status.failed() {
-    values.release()
-    ret status.code
-}
+values.push(10)
+values.push(20)
+values.push(30)
 
 if values.len() != 3 {
     values.release()
@@ -37,11 +23,7 @@ if *middle != 20 {
 }
 
 var last i32 = 0
-status = values.pop(ref last)
-if status.failed() {
-    values.release()
-    ret status.code
-}
+values.pop(ref last)
 
 if last != 30 {
     values.release()

@@ -58,5 +58,6 @@ def fail_value[T](value T, code i32) Result[T] {
 }
 
 def with_status[T](value T, status Status) Result[T] {
-    ret Result[T](value = value, status = status)
+    var tmp = Result[T](value = value, status = status)
+    ret tmp
 }

@@ -1,4 +1,5 @@
 import string/_c
+import diagnostic/fatal
 import string/result
 import string/view
 
@@ -127,7 +128,7 @@ struct String {
         ret String(storage = self.storage)
     }
 
-    def clone() result.Result[String] {
+    def clone() String {
         ret from_view(self.view())
     }
 
@@ -137,39 +138,29 @@ struct String {
             ret result.fail_value[String](empty(), part.code())
         }
 
-        ret from_view(part.value)
+        ret result.ok_value[String](from_view(part.value))
     }
 
     def substring(start usize, count usize) result.Result[String] {
         ret self.slice(start, count)
     }
 
-    def take(count usize) result.Result[String] {
+    def take(count usize) String {
         ret from_view(self.view().take(count))
     }
 
-    def drop(count usize) result.Result[String] {
+    def drop(count usize) String {
         ret from_view(self.view().drop(count))
     }
 
-    def trimmed() result.Result[String] {
+    def trimmed() String {
         ret from_view(self.view().trim())
     }
 
-    def concat(part view.View) result.Result[String] {
-        var next = self.clone()
-        if next.failed() {
-            ret next
-        }
-
-        var value = next.value
-        var status = value.append(part)
-        if status.failed() {
-            value.release()
-            ret result.fail_value[String](empty(), status.code)
-        }
-
-        ret result.ok_value[String](value)
+    def concat(part view.View) String {
+        var value = self.clone()
+        value.append(part)
+        ret value
     }
 
     def split_once(separator view.View) result.Result[SplitString] {
@@ -178,19 +169,12 @@ struct String {
             ret result.fail_value[SplitString](_empty_split(), parts.code())
         }
 
-        var left = from_view(parts.value.left)
-        if left.failed() {
-            ret result.fail_value[SplitString](_empty_split(), left.code())
-        }
-
-        var right = from_view(parts.value.right)
-        if right.failed() {
-            var keep = left.value
-            keep.release()
-            ret result.fail_value[SplitString](_empty_split(), right.code())
-        }
-
-        ret result.ok_value[SplitString](SplitString(left = left.value, right = right.value))
+        ret result.ok_value[SplitString](
+            SplitString(
+                left = from_view(parts.value.left),
+                right = from_view(parts.value.right)
+            )
+        )
     }
 
     def rsplit_once(separator view.View) result.Result[SplitString] {
@@ -199,24 +183,17 @@ struct String {
             ret result.fail_value[SplitString](_empty_split(), parts.code())
         }
 
-        var left = from_view(parts.value.left)
-        if left.failed() {
-            ret result.fail_value[SplitString](_empty_split(), left.code())
-        }
-
-        var right = from_view(parts.value.right)
-        if right.failed() {
-            var keep = left.value
-            keep.release()
-            ret result.fail_value[SplitString](_empty_split(), right.code())
-        }
-
-        ret result.ok_value[SplitString](SplitString(left = left.value, right = right.value))
+        ret result.ok_value[SplitString](
+            SplitString(
+                left = from_view(parts.value.left),
+                right = from_view(parts.value.right)
+            )
+        )
     }
 
-    def replace_first(needle view.View, replacement view.View) result.Result[String] {
+    def replace_first(needle view.View, replacement view.View) String {
         if needle.is_empty() {
-            ret result.fail_value[String](empty(), result.ERR_RANGE)
+            fatal.panic("string.String.replace_first: empty needle")
         }
 
         var found = self.index_of(needle)
@@ -225,27 +202,17 @@ struct String {
         }
 
         if found.failed() {
-            ret result.fail_value[String](empty(), found.code())
+            fatal.panic("string.String.replace_first: invalid search result")
         }
 
-        var next = self.clone()
-        if next.failed() {
-            ret next
-        }
-
-        var value = next.value
-        var status = value.replace(found.value, needle.len(), replacement)
-        if status.failed() {
-            value.release()
-            ret result.fail_value[String](empty(), status.code)
-        }
-
-        ret result.ok_value[String](value)
+        var value = self.clone()
+        value.replace(found.value, needle.len(), replacement)
+        ret value
     }
 
-    def repeat(times usize) result.Result[String] {
+    def repeat(times usize) String {
         if times == 0 || self.is_empty() {
-            ret result.ok_value[String](empty())
+            ret empty()
         }
 
         if times == 1 {
@@ -253,29 +220,21 @@ struct String {
         }
 
         var built = empty()
-        var status = built.reserve(self.len() * times)
-        if status.failed() {
-            ret result.fail_value[String](empty(), status.code)
-        }
+        built.reserve(self.len() * times)
 
         var count usize = 0
         var part = self.view()
         for count < times {
-            status = built.append(part)
-            if status.failed() {
-                built.release()
-                ret result.fail_value[String](empty(), status.code)
-            }
-
+            built.append(part)
             count = count + 1
         }
 
-        ret result.ok_value[String](built)
+        ret built
     }
 
-    def replace_all(needle view.View, replacement view.View) result.Result[String] {
+    def replace_all(needle view.View, replacement view.View) String {
         if needle.is_empty() {
-            ret result.fail_value[String](empty(), result.ERR_RANGE)
+            fatal.panic("string.String.replace_all: empty needle")
         }
 
         var found = self.index_of(needle)
@@ -284,7 +243,7 @@ struct String {
         }
 
         if found.failed() {
-            ret result.fail_value[String](empty(), found.code())
+            fatal.panic("string.String.replace_all: invalid search result")
         }
 
         var source = self.view()
@@ -296,198 +255,130 @@ struct String {
             if next.missing() {
                 var rest = source.slice(cursor, source.len() - cursor)
                 if rest.failed() {
-                    built.release()
-                    ret result.fail_value[String](empty(), rest.code())
+                    fatal.panic("string.String.replace_all: invalid tail slice")
                 }
 
-                var status = built.append(rest.value)
-                if status.failed() {
-                    built.release()
-                    ret result.fail_value[String](empty(), status.code)
-                }
-
-                ret result.ok_value[String](built)
+                built.append(rest.value)
+                ret built
             }
 
             if next.failed() {
-                built.release()
-                ret result.fail_value[String](empty(), next.code())
+                fatal.panic("string.String.replace_all: invalid search result")
             }
 
             var index = cursor + next.value
             var part = source.slice(cursor, index - cursor)
             if part.failed() {
-                built.release()
-                ret result.fail_value[String](empty(), part.code())
+                fatal.panic("string.String.replace_all: invalid slice range")
             }
 
-            var status = built.append(part.value)
-            if status.failed() {
-                built.release()
-                ret result.fail_value[String](empty(), status.code)
-            }
-
-            status = built.append(replacement)
-            if status.failed() {
-                built.release()
-                ret result.fail_value[String](empty(), status.code)
-            }
+            built.append(part.value)
+            built.append(replacement)
 
             cursor = index + needle.len()
         }
 
-        ret result.ok_value[String](built)
+        ret built
     }
 
-    def lower_ascii() result.Result[String] {
-        var next = self.clone()
-        if next.failed() {
-            ret next
-        }
-
-        var value = next.value
-        var status = value.make_lower_ascii()
-        if status.failed() {
-            value.release()
-            ret result.fail_value[String](empty(), status.code)
-        }
-
-        ret result.ok_value[String](value)
+    def lower_ascii() String {
+        var value = self.clone()
+        value.make_lower_ascii()
+        ret value
     }
 
-    def upper_ascii() result.Result[String] {
-        var next = self.clone()
-        if next.failed() {
-            ret next
-        }
-
-        var value = next.value
-        var status = value.make_upper_ascii()
-        if status.failed() {
-            value.release()
-            ret result.fail_value[String](empty(), status.code)
-        }
-
-        ret result.ok_value[String](value)
+    def upper_ascii() String {
+        var value = self.clone()
+        value.make_upper_ascii()
+        ret value
     }
 
-    set def reserve(min_capacity usize) result.Status {
-        ret self._ensure_capacity(min_capacity)
+    set def reserve(min_capacity usize) {
+        self._ensure_capacity(min_capacity)
     }
 
-    set def clear() result.Status {
+    set def clear() {
         if self.storage == null {
-            ret result.success()
+            ret
         }
 
         if self.storage.refs > 1 {
             _release_storage(self.storage)
             self.storage = null
-            ret result.success()
+            ret
         }
 
         self.storage.size = 0
         self.storage.bytes(0) = 0
-        ret result.success()
     }
 
-    set def push(byte u8) result.Status {
+    set def push(byte u8) {
         var current = self.len()
-        var status = self._ensure_capacity(current + 1)
-        if status.failed() {
-            ret status
-        }
-
+        self._ensure_capacity(current + 1)
         self.storage.bytes(current) = byte
         self.storage.size = current + 1
         self.storage.bytes(self.storage.size) = 0
-        ret result.success()
     }
 
-    set def set_byte(index usize, byte u8) result.Status {
+    set def set_byte(index usize, byte u8) {
         var current = self.len()
         if index >= current {
-            ret result.failure(result.ERR_RANGE)
+            fatal.panic("string.String.set_byte: index out of range")
         }
 
-        var status = self._ensure_capacity(current)
-        if status.failed() {
-            ret status
-        }
-
+        self._ensure_capacity(current)
         self.storage.bytes(index) = byte
-        ret result.success()
     }
 
-    set def assign(part view.View) result.Status {
-        var status = self.clear()
-        if status.failed() {
-            ret status
-        }
-
-        ret self.append(part)
+    set def assign(part view.View) {
+        self.clear()
+        self.append(part)
     }
 
-    set def append(part view.View) result.Status {
+    set def append(part view.View) {
         if part.is_empty() {
-            ret result.success()
+            ret
         }
 
-        var copied = from_view(part)
-        if copied.failed() {
-            ret result.failure(copied.code())
-        }
-
-        var safe = copied.value
-        var status = self._append_ready(safe.view())
+        var safe = from_view(part)
+        self._append_ready(safe.view())
         safe.release()
-        ret status
     }
 
-    set def prepend(part view.View) result.Status {
-        ret self.insert(0, part)
+    set def prepend(part view.View) {
+        self.insert(0, part)
     }
 
-    set def insert(index usize, part view.View) result.Status {
+    set def insert(index usize, part view.View) {
         if part.is_empty() {
             if index > self.len() {
-                ret result.failure(result.ERR_RANGE)
+                fatal.panic("string.String.insert: index out of range")
             }
 
-            ret result.success()
+            ret
         }
 
-        var copied = from_view(part)
-        if copied.failed() {
-            ret result.failure(copied.code())
-        }
-
-        var safe = copied.value
-        var status = self._insert_ready(index, safe.view())
+        var safe = from_view(part)
+        self._insert_ready(index, safe.view())
         safe.release()
-        ret status
     }
 
-    set def remove(index usize, count usize) result.Status {
+    set def remove(index usize, count usize) {
         var current = self.len()
         if index > current {
-            ret result.failure(result.ERR_RANGE)
+            fatal.panic("string.String.remove: index out of range")
         }
 
         var remaining = current - index
         if count > remaining {
-            ret result.failure(result.ERR_RANGE)
+            fatal.panic("string.String.remove: count out of range")
         }
 
         if count == 0 {
-            ret result.success()
+            ret
         }
 
-        var status = self._ensure_capacity(current)
-        if status.failed() {
-            ret status
-        }
-
+        self._ensure_capacity(current)
         var read = index + count
         for read < current {
             self.storage.bytes(read - count) = self.storage.bytes(read)
@@ -496,105 +387,77 @@ struct String {
 
         self.storage.size = current - count
         self.storage.bytes(self.storage.size) = 0
-        ret result.success()
     }
 
-    set def truncate(size usize) result.Status {
+    set def truncate(size usize) {
         var current = self.len()
         if size > current {
-            ret result.failure(result.ERR_RANGE)
+            fatal.panic("string.String.truncate: size out of range")
         }
 
-        var status = self._ensure_capacity(current)
-        if status.failed() {
-            ret status
-        }
-
+        self._ensure_capacity(current)
         self.storage.size = size
         self.storage.bytes(size) = 0
-        ret result.success()
     }
 
-    set def replace(index usize, count usize, part view.View) result.Status {
+    set def replace(index usize, count usize, part view.View) {
         var current = self.len()
         if index > current {
-            ret result.failure(result.ERR_RANGE)
+            fatal.panic("string.String.replace: index out of range")
         }
 
         var remaining = current - index
         if count > remaining {
-            ret result.failure(result.ERR_RANGE)
+            fatal.panic("string.String.replace: count out of range")
         }
 
-        var copied = from_view(part)
-        if copied.failed() {
-            ret result.failure(copied.code())
-        }
-
-        var safe = copied.value
-        var status = self._replace_ready(index, count, safe.view())
+        var safe = from_view(part)
+        self._replace_ready(index, count, safe.view())
         safe.release()
-        ret status
     }
 
-    set def trim_start() result.Status {
+    set def trim_start() {
         var part = self.view().trim_start()
         var start = self.len() - part.len()
         if start == 0 {
-            ret result.success()
+            ret
         }
 
-        ret self.remove(0, start)
+        self.remove(0, start)
     }
 
-    set def trim_end() result.Status {
+    set def trim_end() {
         var part = self.view().trim_end()
         if part.len() == self.len() {
-            ret result.success()
+            ret
         }
 
-        ret self.remove(part.len(), self.len() - part.len())
+        self.remove(part.len(), self.len() - part.len())
     }
 
-    set def trim() result.Status {
-        var status = self.trim_end()
-        if status.failed() {
-            ret status
-        }
-
-        ret self.trim_start()
+    set def trim() {
+        self.trim_end()
+        self.trim_start()
     }
 
-    set def make_lower_ascii() result.Status {
+    set def make_lower_ascii() {
         var current = self.len()
-        var status = self._ensure_capacity(current)
-        if status.failed() {
-            ret status
-        }
-
+        self._ensure_capacity(current)
         var index usize = 0
         for index < current {
             self.storage.bytes(index) = _ascii_lower(self.storage.bytes(index))
             index = index + 1
         }
-
-        ret result.success()
     }
 
-    set def make_upper_ascii() result.Status {
+    set def make_upper_ascii() {
         var current = self.len()
-        var status = self._ensure_capacity(current)
-        if status.failed() {
-            ret status
-        }
-
+        self._ensure_capacity(current)
         var index usize = 0
         for index < current {
             self.storage.bytes(index) = _ascii_upper(self.storage.bytes(index))
             index = index + 1
         }
-
-        ret result.success()
     }
 
     set def release() {
@@ -602,7 +465,7 @@ struct String {
         self.storage = null
     }
 
-    set def _ensure_capacity(min_capacity usize) result.Status {
+    set def _ensure_capacity(min_capacity usize) {
         var required = min_capacity
         if self.storage != null && self.storage.size > required {
             required = self.storage.size
@@ -610,25 +473,25 @@ struct String {
 
         if required == 0 {
             if self.storage == null {
-                ret result.success()
+                ret
             }
 
             if self.storage.refs == 1 {
-                ret result.success()
+                ret
             }
 
             var detached = _copy_storage(self.storage, self.storage.size)
             if detached == null {
-                ret result.failure(result.ERR_ALLOC)
+                fatal.oom("string.String.reserve")
             }
 
             _release_storage(self.storage)
             self.storage = detached
-            ret result.success()
+            ret
         }
 
         if self.storage != null && self.storage.refs == 1 && required <= self.storage.capacity {
-            ret result.success()
+            ret
         }
 
         var base usize = 0
@@ -644,42 +507,32 @@ struct String {
 
         var detached = _copy_storage(source, next_capacity)
         if detached == null {
-            ret result.failure(result.ERR_ALLOC)
+            fatal.oom("string.String.reserve")
         }
 
         _release_storage(self.storage)
         self.storage = detached
-        ret result.success()
     }
 
-    set def _append_ready(part view.View) result.Status {
+    set def _append_ready(part view.View) {
         var current = self.len()
-        var status = self._ensure_capacity(current + part.len())
-        if status.failed() {
-            ret status
-        }
-
+        self._ensure_capacity(current + part.len())
         _copy_bytes(self.storage.bytes, current, part.data, part.len())
         self.storage.size = current + part.len()
         self.storage.bytes(self.storage.size) = 0
-        ret result.success()
     }
 
-    set def _insert_ready(index usize, part view.View) result.Status {
+    set def _insert_ready(index usize, part view.View) {
         var current = self.len()
         if index > current {
-            ret result.failure(result.ERR_RANGE)
+            fatal.panic("string.String.insert: index out of range")
         }
 
         if part.is_empty() {
-            ret result.success()
+            ret
         }
 
-        var status = self._ensure_capacity(current + part.len())
-        if status.failed() {
-            ret status
-        }
-
+        self._ensure_capacity(current + part.len())
         var read = current
         for read > index {
             read = read - 1
@@ -689,16 +542,12 @@ struct String {
         _copy_bytes(self.storage.bytes, index, part.data, part.len())
         self.storage.size = current + part.len()
         self.storage.bytes(self.storage.size) = 0
-        ret result.success()
     }
 
-    set def _replace_ready(index usize, count usize, part view.View) result.Status {
+    set def _replace_ready(index usize, count usize, part view.View) {
         var current = self.len()
         var next_size = current - count + part.len()
-        var status = self._ensure_capacity(next_size)
-        if status.failed() {
-            ret status
-        }
+        self._ensure_capacity(next_size)
 
         if part.len() > count {
             var grow = part.len() - count
@@ -719,7 +568,6 @@ struct String {
         _copy_bytes(self.storage.bytes, index, part.data, part.len())
         self.storage.size = next_size
         self.storage.bytes(self.storage.size) = 0
-        ret result.success()
     }
 }
 
@@ -732,31 +580,31 @@ def empty() String {
     ret String(storage = null)
 }
 
-def from_view(source view.View) result.Result[String] {
+def from_view(source view.View) String {
     if source.is_empty() {
-        ret result.ok_value[String](empty())
+        ret empty()
     }
 
     var storage = _new_storage(source.len())
     if storage == null {
-        ret result.fail_value[String](empty(), result.ERR_ALLOC)
+        fatal.oom("string.from_view")
     }
 
     _copy_bytes(storage.bytes, 0, source.data, source.len())
     storage.size = source.len()
     storage.bytes(storage.size) = 0
-    ret result.ok_value[String](String(storage = storage))
+    ret String(storage = storage)
 }
 
-def from_bytes(data u8 const[*], size usize) result.Result[String] {
+def from_bytes(data u8 const[*], size usize) String {
     ret from_view(view.from_ptr(data, size))
 }
 
-def from_cstr(text u8 const[*]) result.Result[String] {
+def from_cstr(text u8 const[*]) String {
     ret from_view(view.from_cstr(text))
 }
 
-def from_literal(text u8 const[*]) result.Result[String] {
+def from_literal(text u8 const[*]) String {
     ret from_cstr(text)
 }
 

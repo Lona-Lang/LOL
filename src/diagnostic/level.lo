@@ -1,0 +1,21 @@
+struct Level {
+    prefix u8 const[*]
+    exit_code i32
+    aborting bool
+}
+
+def note() Level {
+    ret Level(prefix = "note: ", exit_code = 0, aborting = false)
+}
+
+def warn() Level {
+    ret Level(prefix = "warning: ", exit_code = 0, aborting = false)
+}
+
+def error() Level {
+    ret Level(prefix = "error: ", exit_code = 1, aborting = false)
+}
+
+def panic() Level {
+    ret Level(prefix = "panic: ", exit_code = 1, aborting = true)
+}

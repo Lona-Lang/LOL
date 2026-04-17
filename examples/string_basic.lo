@@ -1,17 +1,8 @@
 import string/string
 import string/view
 
-var loaded = string.from_literal("  hello lona  ")
-if loaded.failed() {
-    ret loaded.code()
-}
-
-var text = loaded.value
-var status = text.trim()
-if status.failed() {
-    text.release()
-    ret status.code
-}
+var text = string.from_literal("  hello lona  ")
+text.trim()
 
 if !text.equals(view.from_literal("hello lona")) {
     text.release()
@@ -23,27 +14,14 @@ if !text.equals_ignore_ascii_case(view.from_literal("HELLO LONA")) {
     ret 23
 }
 
-var shout = text.upper_ascii()
-if shout.failed() {
-    text.release()
-    ret shout.code()
-}
-
-var loud = shout.value
+var loud = text.upper_ascii()
 if !loud.equals(view.from_literal("HELLO LONA")) {
     loud.release()
     text.release()
     ret 19
 }
 
-var quiet = loud.lower_ascii()
-if quiet.failed() {
-    loud.release()
-    text.release()
-    ret quiet.code()
-}
-
-var back = quiet.value
+var back = loud.lower_ascii()
 if !back.equals(view.from_literal("hello lona")) {
     back.release()
     loud.release()
@@ -86,27 +64,14 @@ if last.value != 7 {
     ret 16
 }
 
-var first = text.replace_first(view.from_literal(" "), view.from_literal("-"))
-if first.failed() {
-    text.release()
-    ret first.code()
-}
-
-var dashed = first.value
+var dashed = text.replace_first(view.from_literal(" "), view.from_literal("-"))
 if !dashed.equals(view.from_literal("hello-lona")) {
     dashed.release()
     text.release()
     ret 21
 }
 
-var sentence = dashed.replace_all(view.from_literal("o"), view.from_literal("0"))
-if sentence.failed() {
-    dashed.release()
-    text.release()
-    ret sentence.code()
-}
-
-var normalized = sentence.value
+var normalized = dashed.replace_all(view.from_literal("o"), view.from_literal("0"))
 if !normalized.equals(view.from_literal("hell0-l0na")) {
     normalized.release()
     dashed.release()
@@ -141,17 +106,7 @@ if !pair.right.equals(view.from_literal("lona")) {
     ret 25
 }
 
-var echoed = pair.left.repeat(3)
-if echoed.failed() {
-    pair.left.release()
-    pair.right.release()
-    normalized.release()
-    dashed.release()
-    text.release()
-    ret echoed.code()
-}
-
-var repeated = echoed.value
+var repeated = pair.left.repeat(3)
 if !repeated.equals(view.from_literal("hellohellohello")) {
     repeated.release()
     pair.left.release()
@@ -166,21 +121,8 @@ repeated.release()
 pair.left.release()
 pair.right.release()
 
-status = text.replace(split.value, 1, view.from_literal("-"))
-if status.failed() {
-    normalized.release()
-    dashed.release()
-    text.release()
-    ret status.code
-}
-
-status = text.append(view.from_literal(" library"))
-if status.failed() {
-    normalized.release()
-    dashed.release()
-    text.release()
-    ret status.code
-}
+text.replace(split.value, 1, view.from_literal("-"))
+text.append(view.from_literal(" library"))
 
 if !text.equals(view.from_literal("hello-lona library")) {
     normalized.release()

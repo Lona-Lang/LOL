@@ -1,21 +1,10 @@
 import string/string
 import string/view
 
-var created = string.from_literal("lona")
-if created.failed() {
-    ret created.code()
-}
-
-var left = created.value
+var left = string.from_literal("lona")
 var right = left.share()
 
-var status = left.append(view.from_literal("-lang"))
-if status.failed() {
-    right.release()
-    left.release()
-    ret status.code
-}
-
+left.append(view.from_literal("-lang"))
 if !left.equals(view.from_literal("lona-lang")) {
     right.release()
     left.release()
@@ -28,13 +17,7 @@ if !right.equals(view.from_literal("lona")) {
     ret 11
 }
 
-status = right.prepend(view.from_literal("my-"))
-if status.failed() {
-    right.release()
-    left.release()
-    ret status.code
-}
-
+right.prepend(view.from_literal("my-"))
 if !right.equals(view.from_literal("my-lona")) {
     right.release()
     left.release()

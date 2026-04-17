@@ -1,23 +1,9 @@
 import container/list
-import container/result
 
 var values = list.make[i32]()
-var status = values.push_back(5)
-if status.failed() {
-    ret status.code
-}
-
-status = values.push_back(6)
-if status.failed() {
-    values.clear()
-    ret status.code
-}
-
-status = values.push_front(4)
-if status.failed() {
-    values.clear()
-    ret status.code
-}
+values.push_back(5)
+values.push_back(6)
+values.push_front(4)
 
 var it = values.iter()
 var total i32 = 0
@@ -38,11 +24,7 @@ if total != 15 {
 }
 
 var first i32 = 0
-status = values.pop_front(ref first)
-if status.failed() {
-    values.clear()
-    ret status.code
-}
+values.pop_front(ref first)
 
 if first != 4 {
     values.clear()

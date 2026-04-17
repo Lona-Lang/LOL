@@ -147,9 +147,35 @@ struct File {
     }
 }
 
-impl File: stream.TextSink
-impl File: stream.ByteSource
-impl File: stream.ByteSink
+impl stream.TextSink for File {
+    set def write(text u8 const[*]) result.Status {
+        ret self.write(text)
+    }
+
+    set def flush() result.Status {
+        ret self.flush()
+    }
+}
+
+impl stream.ByteSource for File {
+    set def read_byte() result.Result[i32] {
+        ret self.read_byte()
+    }
+
+    set def read_bytes(buffer u8*, size usize, count usize) result.Result[usize] {
+        ret self.read_bytes(buffer, size, count)
+    }
+}
+
+impl stream.ByteSink for File {
+    set def write_bytes(buffer u8 const[*], size usize, count usize) result.Result[usize] {
+        ret self.write_bytes(buffer, size, count)
+    }
+
+    set def flush() result.Status {
+        ret self.flush()
+    }
+}
 
 // Path-based file system operations are grouped under a dedicated receiver.
 struct FilePath {

@@ -1,0 +1,94 @@
+import diagnostic/_c
+import diagnostic/level
+import ios/console
+import ios/result
+
+def emit(entry level.Level, text u8 const[*]) result.Status {
+    var status = console.error(entry.prefix)
+    if status.failed() {
+        ret status
+    }
+
+    status = console.error_line(text)
+    if status.failed() {
+        ret status
+    }
+
+    ret console.flush_error()
+}
+
+def note(text u8 const[*]) result.Status {
+    ret emit(level.note(), text)
+}
+
+def warn(text u8 const[*]) result.Status {
+    ret emit(level.warn(), text)
+}
+
+def error(text u8 const[*]) result.Status {
+    ret emit(level.error(), text)
+}
+
+def fail(text u8 const[*]) i32 {
+    var entry = level.error()
+    emit(entry, text)
+    ret entry.exit_code
+}
+
+def fail_code(text u8 const[*], code i32) i32 {
+    error(text)
+    ret code
+}
+
+def warn_if(condition bool, text u8 const[*]) result.Status {
+    if !condition {
+        ret result.success()
+    }
+
+    ret warn(text)
+}
+
+def error_if(condition bool, text u8 const[*]) result.Status {
+    if !condition {
+        ret result.success()
+    }
+
+    ret error(text)
+}
+
+def require(condition bool, text u8 const[*]) i32 {
+    if condition {
+        ret 0
+    }
+
+    ret fail(text)
+}
+
+def assert(condition bool, text u8 const[*]) {
+    if condition {
+        ret
+    }
+
+    panic(text)
+}
+
+def panic(text u8 const[*]) {
+    var entry = level.panic()
+    emit(entry, text)
+    if entry.aborting {
+        _c.abort()
+    }
+
+    _c.exit(entry.exit_code)
+}
+
+def panic_code(text u8 const[*], code i32) {
+    emit(level.panic(), text)
+    _c.exit(code)
+}
+
+def panic_if(condition bool, text u8 const[*]) {
+    if condition {
+        panic(text)
+    }
+}

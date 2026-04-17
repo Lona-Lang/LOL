@@ -1,5 +1,5 @@
 import container/_c
-import container/result
+import diagnostic/fatal
 
 struct _Node[T] {
     set value T
@@ -72,27 +72,18 @@ struct List[T] {
         ret ListIterator[T](current = self.head)
     }
 
-    set def push_front(value T) result.Status {
+    set def push_front(value T) {
         var node = _new_node[T](value)
-        if node == null {
-            ret result.failure(result.ERR_ALLOC)
-        }
-
         node.next = self.head
         self.head = node
         if self.tail == null {
             self.tail = node
         }
         self.size = self.size + 1
-        ret result.success()
     }
 
-    set def push_back(value T) result.Status {
+    set def push_back(value T) {
         var node = _new_node[T](value)
-        if node == null {
-            ret result.failure(result.ERR_ALLOC)
-        }
-
         if self.tail == null {
             self.head = node
             self.tail = node
@@ -102,12 +93,11 @@ struct List[T] {
         }
 
         self.size = self.size + 1
-        ret result.success()
     }
 
-    set def pop_front(ref out T) result.Status {
+    set def pop_front(ref out T) {
         if self.head == null {
-            ret result.failure(result.ERR_EMPTY)
+            fatal.empty("container/list.pop_front")
         }
 
         var node = self.head
@@ -119,7 +109,6 @@ struct List[T] {
 
         self.size = self.size - 1
         _c.free(cast[u8*](node))
-        ret result.success()
     }
 
     set def clear() {
@@ -143,7 +132,7 @@ def make[T]() List[T] {
 def _new_node[T](value T) _Node[T]* {
     var raw = _c.malloc(sizeof[_Node[T]]())
     if raw == null {
-        ret null
+        fatal.oom("container/list.push")
     }
 
     var node _Node[T]* = cast[_Node[T]*](raw)

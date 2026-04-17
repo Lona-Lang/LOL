@@ -1,6 +1,6 @@
 import container/_c
-import container/result
 import container/slice
+import diagnostic/fatal
 
 struct Vec[T] {
     data T[*]
@@ -56,9 +56,9 @@ struct Vec[T] {
         ret slice.from_ptr[T](items, self.size)
     }
 
-    set def reserve(min_capacity usize) result.Status {
+    set def reserve(min_capacity usize) {
         if min_capacity <= self.capacity {
-            ret result.success()
+            ret
         }
 
         var next_capacity usize = self.capacity
@@ -72,7 +72,7 @@ struct Vec[T] {
 
         var raw = _c.malloc(sizeof[T]() * next_capacity)
         if raw == null {
-            ret result.failure(result.ERR_ALLOC)
+            fatal.oom("container/vec.reserve")
         }
 
         var next_items T[*] = cast[T[*]](raw)
@@ -88,28 +88,21 @@ struct Vec[T] {
 
         self.data = next_items
         self.capacity = next_capacity
-        ret result.success()
     }
 
-    set def push(value T) result.Status {
-        var status = self.reserve(self.size + 1)
-        if status.failed() {
-            ret status
-        }
-
+    set def push(value T) {
+        self.reserve(self.size + 1)
         self.data(self.size) = value
         self.size = self.size + 1
-        ret result.success()
     }
 
-    set def pop(ref out T) result.Status {
+    set def pop(ref out T) {
         if self.size == 0 {
-            ret result.failure(result.ERR_EMPTY)
+            fatal.empty("container/vec.pop")
         }
 
         out = self.data(self.size - 1)
         self.size = self.size - 1
-        ret result.success()
     }
 
     set def clear() {
@@ -131,12 +124,8 @@ def make[T]() Vec[T] {
     ret Vec[T](data = null, size = 0, capacity = 0)
 }
 
-def with_capacity[T](capacity usize) result.Result[Vec[T]] {
+def with_capacity[T](capacity usize) Vec[T] {
     var value = make[T]()
-    var status = value.reserve(capacity)
-    if status.failed() {
-        ret result.fail_value[Vec[T]](value, result.ERR_ALLOC)
-    }
-
-    ret result.ok_value[Vec[T]](value)
+    value.reserve(capacity)
+    ret value
 }

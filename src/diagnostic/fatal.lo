@@ -1,0 +1,40 @@
+#[extern "C"]
+def write(fd i32, buffer u8 const[*], count usize) i64
+
+#[extern "C"]
+def strlen(text u8 const[*]) usize
+
+#[extern "C"]
+def abort()
+
+def panic(message u8 const[*]) {
+    _write_text("panic: ")
+    _write_line(message)
+    abort()
+}
+
+def oom(site u8 const[*]) {
+    _write_text("panic: ")
+    _write_text(site)
+    _write_line(": out of memory")
+    abort()
+}
+
+def empty(site u8 const[*]) {
+    _write_text("panic: ")
+    _write_text(site)
+    _write_line(": empty")
+    abort()
+}
+
+def _write_line(text u8 const[*]) {
+    _write_text(text)
+    write(2, "\n", 1)
+}
+
+def _write_text(text u8 const[*]) {
+    var size = strlen(text)
+    if size > 0 {
+        write(2, text, size)
+    }
+}

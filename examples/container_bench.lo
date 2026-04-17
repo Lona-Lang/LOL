@@ -7,21 +7,12 @@ global COUNT usize = 1000000
 
 def run_vec(count usize, ref out report.Measure) i32 {
     var values = vec.make[u64]()
-    var status = values.reserve(count)
-    if status.failed() {
-        values.release()
-        ret status.code
-    }
+    values.reserve(count)
 
     var start = time.now_us()
     var index usize = 0
     for index < count {
-        status = values.push(cast[u64](index))
-        if status.failed() {
-            values.release()
-            ret status.code
-        }
-
+        values.push(cast[u64](index))
         index = index + 1
     }
     var insert_us = time.since_us(start)
@@ -61,12 +52,7 @@ def run_vec(count usize, ref out report.Measure) i32 {
     start = time.now_us()
     for !values.is_empty() {
         var item u64 = 0
-        status = values.pop(ref item)
-        if status.failed() {
-            values.release()
-            ret status.code
-        }
-
+        values.pop(ref item)
         delete_sum = delete_sum + item
     }
     var delete_us = time.since_us(start)
@@ -87,12 +73,7 @@ def run_list(count usize, ref out report.Measure) i32 {
     var start = time.now_us()
     var index usize = 0
     for index < count {
-        var status = values.push_back(cast[u64](index))
-        if status.failed() {
-            values.clear()
-            ret status.code
-        }
-
+        values.push_back(cast[u64](index))
         index = index + 1
     }
     var insert_us = time.since_us(start)
@@ -132,12 +113,7 @@ def run_list(count usize, ref out report.Measure) i32 {
     start = time.now_us()
     for !values.is_empty() {
         var item u64 = 0
-        var status = values.pop_front(ref item)
-        if status.failed() {
-            values.clear()
-            ret status.code
-        }
-
+        values.pop_front(ref item)
         delete_sum = delete_sum + item
     }
     var delete_us = time.since_us(start)

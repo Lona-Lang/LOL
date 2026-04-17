@@ -42,6 +42,14 @@ Modules:
 - `algorithm/search`
 - `algorithm/sort`
 
+### `diagnostic`
+
+Modules:
+
+- `diagnostic/fatal`
+- `diagnostic/level`
+- `diagnostic/diagnostic`
+
 ## Build
 
 ```bash
@@ -54,6 +62,7 @@ python3 tools/build.py examples/string_basic.lo --run
 python3 tools/build.py examples/string_cow.lo --run
 python3 tools/build.py examples/algorithm_search.lo --run
 python3 tools/build.py examples/algorithm_sort.lo --run
+python3 tools/build.py examples/diagnostic_basic.lo --run
 ```
 
 Direct compiler use:
