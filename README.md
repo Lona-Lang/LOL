@@ -1,10 +1,10 @@
 # lona-official-library
 
-Source-only official packages for Lona.
+Official source packages for Lona.
 
-Packages live under `src/<package>/`.
-Each `.lo` file is one module.
-The builder stays thin because Lona already does top-down dependency analysis and incremental compilation.
+Source files are organized under `src/<package>/`.
+Each `.lo` file defines one module.
+The repository includes a minimal build helper for compiling example programs against the package tree.
 
 ## Packages
 
@@ -65,7 +65,7 @@ python3 tools/build.py examples/algorithm_sort.lo --run
 python3 tools/build.py examples/diagnostic_basic.lo --run
 ```
 
-Direct compiler use:
+Direct compiler invocation:
 
 ```bash
 lac --cache-dir build/lona-cache -I src examples/hello_console.lo build/hello_console

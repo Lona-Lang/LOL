@@ -1,20 +1,8 @@
 import diagnostic/diagnostic
 
-var status = diagnostic.note("starting diagnostic demo")
-if status.failed() {
-    ret status.code
-}
-
-status = diagnostic.warn("this is only a warning")
-if status.failed() {
-    ret status.code
-}
-
-status = diagnostic.error_if(true, "this is a recoverable error report")
-if status.failed() {
-    ret status.code
-}
-
+diagnostic.note("starting diagnostic demo")
+diagnostic.warn("this is only a warning")
+diagnostic.error_if(true, "this is a recoverable error report")
 if diagnostic.require(true, "unreachable requirement failure") != 0 {
     ret 10
 }

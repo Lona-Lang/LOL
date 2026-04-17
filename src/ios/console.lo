@@ -1,6 +1,6 @@
+import diagnostic/fatal
 import ios/_c
 import ios/file
-import ios/result
 import ios/stream
 
 def standard_input() file.File {
@@ -15,32 +15,50 @@ def standard_error() file.File {
     ret file._borrow(_c.stderr)
 }
 
-def write(text u8 const[*]) result.Status {
+def write(text u8 const[*]) {
     var target = standard_output()
-    ret stream.write_to[file.File](ref target, text)
+    var status = stream.write_to[file.File](ref target, text)
+    if status.failed() {
+        fatal.panic("ios.console.write: write failed")
+    }
 }
 
-def write_line(text u8 const[*]) result.Status {
+def write_line(text u8 const[*]) {
     var target = standard_output()
-    ret stream.write_line_to[file.File](ref target, text)
+    var status = stream.write_line_to[file.File](ref target, text)
+    if status.failed() {
+        fatal.panic("ios.console.write_line: write failed")
+    }
 }
 
-def error(text u8 const[*]) result.Status {
+def error(text u8 const[*]) {
     var target = standard_error()
-    ret stream.write_to[file.File](ref target, text)
+    var status = stream.write_to[file.File](ref target, text)
+    if status.failed() {
+        fatal.panic("ios.console.error: write failed")
+    }
 }
 
-def error_line(text u8 const[*]) result.Status {
+def error_line(text u8 const[*]) {
     var target = standard_error()
-    ret stream.write_line_to[file.File](ref target, text)
+    var status = stream.write_line_to[file.File](ref target, text)
+    if status.failed() {
+        fatal.panic("ios.console.error_line: write failed")
+    }
 }
 
-def flush() result.Status {
+def flush() {
     var target = standard_output()
-    ret stream.flush[file.File](ref target)
+    var status = stream.flush[file.File](ref target)
+    if status.failed() {
+        fatal.panic("ios.console.flush: flush failed")
+    }
 }
 
-def flush_error() result.Status {
+def flush_error() {
     var target = standard_error()
-    ret stream.flush[file.File](ref target)
+    var status = stream.flush[file.File](ref target)
+    if status.failed() {
+        fatal.panic("ios.console.flush_error: flush failed")
+    }
 }

@@ -1,12 +1,4 @@
 import ios/console
-var status = console.write_line("hello from ios/console")
-if status.failed() {
-    ret status.code
-}
-
-status = console.flush()
-if status.failed() {
-    ret status.code
-}
-
+console.write_line("hello from ios/console")
+console.flush()
 ret 0

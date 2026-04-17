@@ -1,32 +1,23 @@
 import diagnostic/_c
 import diagnostic/level
 import ios/console
-import ios/result
 
-def emit(entry level.Level, text u8 const[*]) result.Status {
-    var status = console.error(entry.prefix)
-    if status.failed() {
-        ret status
-    }
-
-    status = console.error_line(text)
-    if status.failed() {
-        ret status
-    }
-
-    ret console.flush_error()
+def emit(entry level.Level, text u8 const[*]) {
+    console.error(entry.prefix)
+    console.error_line(text)
+    console.flush_error()
 }
 
-def note(text u8 const[*]) result.Status {
-    ret emit(level.note(), text)
+def note(text u8 const[*]) {
+    emit(level.note(), text)
 }
 
-def warn(text u8 const[*]) result.Status {
-    ret emit(level.warn(), text)
+def warn(text u8 const[*]) {
+    emit(level.warn(), text)
 }
 
-def error(text u8 const[*]) result.Status {
-    ret emit(level.error(), text)
+def error(text u8 const[*]) {
+    emit(level.error(), text)
 }
 
 def fail(text u8 const[*]) i32 {
@@ -40,20 +31,20 @@ def fail_code(text u8 const[*], code i32) i32 {
     ret code
 }
 
-def warn_if(condition bool, text u8 const[*]) result.Status {
+def warn_if(condition bool, text u8 const[*]) {
     if !condition {
-        ret result.success()
+        ret
     }
 
-    ret warn(text)
+    warn(text)
 }
 
-def error_if(condition bool, text u8 const[*]) result.Status {
+def error_if(condition bool, text u8 const[*]) {
     if !condition {
-        ret result.success()
+        ret
     }
 
-    ret error(text)
+    error(text)
 }
 
 def require(condition bool, text u8 const[*]) i32 {
